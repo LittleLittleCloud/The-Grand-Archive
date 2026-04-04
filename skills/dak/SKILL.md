@@ -1,4 +1,3 @@
-````skill
 ---
 name: dak
 description: Use the dak package and CLI to search, filter, and access feed entries from 大案牍库. Covers keyword search, multi-dimensional filtering (category, source, tags, author, date range), JSON output, and programmatic API usage. Triggers on "search feeds", "搜索", "查找文章", "dak search", "dak feeds", "用dak查".
@@ -180,5 +179,3 @@ cd pkg && bun run build
 - When results are large, pipe through `jq` for further filtering: `dak search "oil" --json | jq '[.[] | select(.score > 20)]'`
 - Use `--title-only` when you want precision over recall (avoids matching incidental keyword mentions in body text).
 - Combine Chinese and English keywords with separate searches when covering bilingual topics.
-
-````
