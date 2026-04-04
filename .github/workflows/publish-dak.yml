@@ -73,30 +73,43 @@ jobs:
             console.log('  Date range:', stats.dateRange.earliest.slice(0,10), '~', stats.dateRange.latest.slice(0,10));
           "
 
-      - name: Bump version
-        if: inputs.bump != 'none' && inputs.bump != ''
+      - name: Set version with date + hash
         run: |
-          npm version ${{ inputs.bump || 'patch' }} --no-git-tag-version
-          VERSION=$(node -p "require('./package.json').version")
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "📌 Version bumped to $VERSION"
+          # Bump base version if manually requested
+          BUMP="${{ inputs.bump }}"
+          if [[ -n "$BUMP" && "$BUMP" != "none" ]]; then
+            npm version "$BUMP" --no-git-tag-version
+          fi
 
-      - name: Auto-bump patch (for auto-trigger)
-        if: inputs.bump == '' || inputs.bump == null
-        run: |
-          npm version patch --no-git-tag-version
-          VERSION=$(node -p "require('./package.json').version")
+          # Read base version (e.g. 0.1.0)
+          BASE=$(node -p "require('./package.json').version")
+
+          # Generate date + git short hash suffix
+          DATE=$(date -u +%Y%m%d)
+          HASH=$(git rev-parse --short HEAD)
+          VERSION="${BASE}-${DATE}.${HASH}"
+
+          # Write version to package.json
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "📌 Auto version bumped to $VERSION"
+          echo "📌 Version: $VERSION"
 
       - name: Publish to npm
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Commit version bump
+      - name: Commit version update
         run: |
           cd ..
+          # Restore base version (without prerelease suffix) for next build
+          BUMP="${{ inputs.bump }}"
+          if [[ -n "$BUMP" && "$BUMP" != "none" ]]; then
+            BASE=$(echo "$VERSION" | sed 's/-.*//')
+            cd pkg && npm version "$BASE" --no-git-tag-version --allow-same-version && cd ..
+          else
+            cd pkg && git checkout package.json && cd ..
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add pkg/package.json
