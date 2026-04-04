@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "feeds/news/2026-04-02_Iran_war_live__Trump_claims_goals_nearing_completion,_vows_to_'finish_job'_30d2f01d4e76.md",
+                "file": "topic_summary/iran_war_gold_oil_impact.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2026-04-02_Iran_war_live__Trump_claims_goals_nearing_completion,_vows_to_'finish_job'_30d2f01d4e76"
+              "title": "iran_war_gold_oil_impact"
             }
           }
         ]
@@ -154,13 +154,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "feeds/news/2026-04-02_Iran_war_live__Trump_claims_goals_nearing_completion,_vows_to_'finish_job'_30d2f01d4e76.md",
+                "file": "topic_summary/iran_war_gold_oil_impact.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "2026-04-02_Iran_war_live__Trump_claims_goals_nearing_completion,_vows_to_'finish_job'_30d2f01d4e76 的大纲"
+              "title": "iran_war_gold_oil_impact 的大纲"
             }
           }
         ],
@@ -183,38 +183,44 @@
   },
   "active": "8034e5b62ddd0287",
   "lastOpenFiles": [
-    "scripts/fix_links.py",
-    "summary/2026_04_01.md",
-    "summary/2026_03_31.md",
-    "summary/2026_03_30.md",
-    "summary/2026_03_29.md",
-    "scripts/write_summaries.py",
-    "summary/2026_03_28.md",
-    "summary/2026_04_02.md",
-    "summary/2026_04_03.md",
-    "feeds/news/2026-03-22_Convincing_Is_Not_Persuading_b070bc73b997.md",
-    "feeds/news/2026-03-21_Former_FBI_Director_Robert_Mueller,_who_investigated_Russia-Trump_campaign_ties,_31c432c028f0.md",
-    "feeds/news/2026-03-20_Japan’s_Takaichi_tries_to_reaffirm_alliance_with_Trump_as_he_seeks_help_securing_4ccb6a0df288.md",
-    "feeds/news/2026-03-18_An_industrial_piping_contractor_on_Claude_Code_[video]_41bc15526138.md",
-    "feeds/news/2026-04-02_Pakistan_to_continue_with_Iran-US_mediation_despite_'obstacles'_0fc892df5959.md",
-    "feeds/news/2026-04-02_Can_Starmer's_40-nation_coalition_open_the_Strait_of_Hormuz__fed9a3a8cbc9.md",
-    "feeds/social/2026-04-02_伊朗10分钟5波导弹袭击以色列_01aa2178b992.md",
-    "feeds/news/2026-04-02_Iran_war_live__Trump_claims_goals_nearing_completion,_vows_to_'finish_job'_30d2f01d4e76.md",
+    "skills/dak_summary/topic-summary.md",
+    "skills/dak_summary/daily-summary.md",
+    "skills/dak_summary/SKILL.md",
+    "skills/dak_summary",
+    "skills/dak/SKILL.md",
+    "skills/dak",
+    "skills",
+    "pkg/skills/SKILL.md",
+    "pkg/skills",
+    "pkg/dist/types-Bwkq0iPQ.d.cts",
+    "pkg/dist/types-Bwkq0iPQ.d.ts",
+    "topic_summary/iran_war_yen_impact.md",
+    "web/public/data/entry/feeds/tech/2026-03-20_示例文章.json",
+    "web/public/data/entry/feeds/tech/2026-03-20_We_rewrote_our_Rust_WASM_Parser_in_TypeScript_–_and_it_got_3x_Faster_6b7dc3dfd488.json",
+    "web/public/data/entry/feeds/tech/2026-03-20_The_Social_Smolnet_3f1a044c0d6e.json",
+    "web/public/data/entry/feeds/tech/2026-03-20_Super_Micro_Shares_Plunge_25%_After_Co-Founder_Charged_in_$2.5B_Smuggling_Plot_837d425aa31c.json",
+    "node_modules/@mixmark-io/domino/test/w3c/README.md",
+    "node_modules/@mixmark-io/domino/README.md",
+    "node_modules/@mixmark-io/domino/CONTRIBUTING.md",
+    "node_modules/@mixmark-io/domino/CHANGELOG.md",
+    "node_modules/turndown/README.md",
+    "node_modules/@types/turndown/README.md",
+    "pkg/README.md",
+    "pkg/node_modules/thenify/README.md",
+    "pkg/node_modules/thenify/History.md",
+    "pkg/node_modules/confbox/README.md",
+    "pkg/node_modules/thenify-all/README.md",
+    "pkg/node_modules/thenify-all/History.md",
+    "pkg/node_modules/object-assign/readme.md",
+    "pkg/node_modules/any-promise/README.md",
+    "pkg/node_modules/ufo/README.md",
+    "pkg/node_modules/pkg-types/README.md",
+    "pkg/node_modules/pathe/README.md",
+    "pkg/node_modules/acorn/README.md",
+    "pkg/node_modules/acorn/CHANGELOG.md",
+    "pkg/node_modules/is-extendable/README.md",
     "canvas/2026-04-03_daily.canvas",
-    "summary",
-    "feeds/social/2026-04-03_OpenAI_刚融到_1220_亿美元，却在二级市场「没人接盘」，马斯克表示「毫不意外」，这是为何？_39aff395d38e.md",
-    "feeds/news/2026-04-03_Show_HN__ctx_–_an_Agentic_Development_Environment_(ADE)_ffcbc88f7c33.md",
-    "canvas",
-    "feeds/news/2026-04-03_Show_HN__Apfel_–_The_free_AI_already_on_your_Mac_782a0c2efb53.md",
-    "feeds/news/2026-04-03_Show_HN__An_evidence-rated_encyclopedia_of_peptides_0a010ac0a228.md",
-    "feeds/news/2026-04-03_SSH_certificates__the_better_SSH_experience_56e2b75930b5.md",
-    "feeds/news/2026-04-03_Stocks_recover_from_early_losses_and_close_with_a_weekly_gain._US_oil_tops_$110__28e5015d7b57.md",
-    "feeds/news/2026-04-03_Rapper_Pooh_Shiesty_charged_with_kidnapping_over_alleged_dispute_involving_rappe_d009c2f624ad.md",
-    "feeds/news/2026-04-03_Pentagon_Pete's_Bigoted_Reason_for_Firing_Top_General_Leaks_8abd5e7e0e1a.md",
-    "feeds/news/2026-04-03_Rubble,_mud_and_hair__How_to_rebuild_a_home_in_Gaza_71475202ffb8.md",
-    "feeds/finance/2026-03-25_Big_Pipeline_for_Defense_IPOs__JPMorgan's_Marengo_002d7d7b44cb.md",
     "未命名.canvas",
-    "未命名 1.canvas",
-    "未命名.base"
+    "未命名 1.canvas"
   ]
 }

@@ -1,4 +1,4 @@
-import type { Stats, SourceConfig, CategoryConfig, EntryMeta } from "./types";
+import type { Stats, SourceConfig, CategoryConfig, EntryMeta, EntryWithContent } from "./types";
 
 const BASE = import.meta.env.BASE_URL + "data";
 
@@ -14,4 +14,6 @@ export const api = {
   getCategories: () => fetchJson<CategoryConfig[]>("categories.json"),
   getEntries: () => fetchJson<EntryMeta[]>("entries.json"),
   getEntriesByCategory: (id: string) => fetchJson<EntryMeta[]>(`entries-${id}.json`),
+  /** Fetch a single entry with full content by its path (e.g. feeds/finance/2026-03-12_xxx_abc123) */
+  getEntry: (path: string) => fetchJson<EntryWithContent>(`entry/${path}.json`),
 };

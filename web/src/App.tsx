@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import type { Stats, CategoryConfig, SourceConfig } from "./types";
 import type { EntryWithContent } from "./types";
 import { api } from "./api";
+import { useRouter } from "./router";
+import EntryPage from "./EntryPage";
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -391,9 +393,7 @@ function EntryList({
           filtered.map((entry) => (
             <a
               key={`${entry.category}/${entry.filename}`}
-              href={entry.link}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`#/entry/${entry.path || `feeds/${entry.category}/${entry.filename.replace(/\.md$/, '')}`}`}
               className="block p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-start gap-3">
@@ -441,6 +441,7 @@ function EntryList({
 // ─── App ────────────────────────────────────────────
 
 export default function App() {
+  const { route, navigate } = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [categories, setCategories] = useState<CategoryConfig[]>([]);
   const [sources, setSources] = useState<SourceConfig[]>([]);
@@ -458,6 +459,16 @@ export default function App() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  // Entry detail page
+  if (route.page === "entry" && route.params.path) {
+    return (
+      <EntryPage
+        path={route.params.path}
+        onBack={() => navigate("home")}
+      />
+    );
+  }
 
   if (loading) {
     return (

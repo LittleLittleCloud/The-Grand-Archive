@@ -103,3 +103,10 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # 有新 feeds 时自动发布 dak 包
+  publish-dak:
+    needs: fetch
+    if: needs.fetch.outputs.has_changes == 'true'
+    uses: ./.github/workflows/publish-dak.yml
+    secrets: inherit

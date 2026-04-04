@@ -14,6 +14,8 @@ export interface EntryMeta {
   read: boolean;
   starred: boolean;
   filename: string;
+  /** Vault 内相对路径，可用作 SPA 路由 */
+  path: string;
 }
 
 export interface EntryWithContent extends EntryMeta {

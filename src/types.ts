@@ -49,4 +49,6 @@ export interface EntryMeta {
   hash: string;
   read: boolean;
   starred: boolean;
+  /** Vault 内相对路径 (不含 .md)，如 feeds/finance/2026-03-12_xxx_abc123 */
+  path: string;
 }

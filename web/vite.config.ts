@@ -5,5 +5,5 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: './', // relative paths for GitHub Pages
+  base: '/The-Grand-Archive/', // GitHub Pages: https://littlelittlecloud.github.io/The-Grand-Archive/
 })

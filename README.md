@@ -1,204 +1,252 @@
 # 大案牍库
 
-RSS 订阅源收集与分类管理工具。
+[![npm](https://img.shields.io/npm/v/@littlelittlecloud/dak)](https://www.npmjs.com/package/@littlelittlecloud/dak)
 
-## 简介
+从多源 RSS 自动收集、分类、索引新闻与资讯，并以 npm 包的形式提供全文搜索与结构化访问。
 
-「大案牍库」用于从各类 RSS 源收集 Feed，并按主题进行归类整理，方便统一阅读与检索。
+## Highlights
 
-所有内容以 **Markdown + YAML front matter** 的形式存储——人类可直接阅读，同时携带结构化 metadata 以支持自动化处理。
+- **AI as First Citizen** — 内置 Claude Skills，AI Agent 可直接搜索、总结、分析所有 feed 内容
+- **大案牍库** (`dak`) — 基于 MiniSearch 的多维度搜索引擎，9700+ 条 feed 全文检索，支持按分类/来源/标签/时间多维过滤
+- **大案牍术** (`dak_summary`) — 从海量 feed 中自动提炼每日新闻总结与专题分析
+- **CLI + API** — `dak` 命令行工具 + TypeScript API，一行命令搜索、浏览、统计
+- **每日更新** — 每日自动更新rss feed，自动构建并发布到 npm
 
-## 功能
+## 安装
 
-- 收集并聚合多来源 RSS Feed
-- 按类别对订阅源进行分类管理
-- 提供统一的信息检索入口
-- 每篇条目带有完整 metadata（来源、时间、标签、语言、去重哈希等）
-
-## 目录结构
-
-```
-大案牍库/
-├── README.md
-├── .gitignore
-├── package.json
-├── tsconfig.json
-├── index.ts                    # CLI 入口
-│
-├── src/                        # 源码
-│   ├── types.ts                #   类型定义
-│   ├── config.ts               #   配置加载器
-│   ├── fetcher.ts              #   RSS 抓取与存储
-│   └── generate.ts             #   静态 JSON 数据生成器
-│
-├── web/                        # SPA Dashboard (Vite + React + TailwindCSS)
-│   ├── src/                    #   React 源码
-│   ├── public/data/            #   生成的静态 JSON 数据
-│   └── dist/                   #   构建产物（部署到 GitHub Pages）
-│
-├── config/                     # 配置文件
-│   ├── sources.yaml            #   RSS 订阅源列表
-│   └── categories.yaml         #   分类定义
-│
-├── feeds/                      # Feed 条目存储（按分类归档）
-│   ├── tech/                   #   科技
-│   ├── news/                   #   新闻
-│   ├── blog/                   #   博客
-│   ├── podcast/                #   播客
-│   └── uncategorized/          #   未分类
-│
-├── templates/                  # 模板
-│   └── entry.md                #   条目模板（含 metadata 字段说明）
-│
-├── scripts/                    # 脚本（抓取、处理、导出等）
-│
-└── archive/                    # 归档（旧条目定期迁移至此）
+```bash
+npm install @littlelittlecloud/dak
+# 或全局安装 CLI
+npm install -g @littlelittlecloud/dak
 ```
 
-## 条目格式
+安装后即可使用 `dak` 命令行工具，或在代码中 `import` 使用。
 
-每篇 Feed 条目是一个独立的 Markdown 文件，命名为 `YYYY-MM-DD_标题.md`，存放在对应分类目录下。
+## Skills
 
-文件结构：
+本项目提供两个 Claude Code / AI Agent 技能（位于 `skills/` 目录），可在任何支持 skill 的环境中使用。
 
-```markdown
----
-title: "文章标题"
-source: 来源名称
-source_url: https://example.com/feed.xml
-link: https://example.com/posts/xxx
-author: 作者
-published: 2026-03-20T10:00:00+08:00    # 发布时间
-fetched: 2026-03-20T16:30:00+08:00      # 抓取时间
-category: tech                           # 分类 ID
-tags: [RSS, 教程]                        # 标签
-language: zh-CN                          # 语言
-guid: https://example.com/posts/xxx      # 唯一标识
-hash: a1b2c3d4e5f6                       # 内容哈希（去重用）
-read: false                              # 已读状态
-starred: false                           # 收藏状态
----
+### 大案牍库 (`skills/dak`)
 
-正文内容（Markdown 格式）...
+> 搜索和访问大案牍库中的 feed 数据
+
+基于 MiniSearch 的多维度搜索引擎，支持关键词全文检索、分类/来源/标签/时间等多维过滤。适合快速查找特定新闻、追踪某个话题的报道，或按条件批量获取 feed 条目。
+
+```
+> 搜索和关税有关的财经新闻
+> 用 dak 查一下最近关于 AI 的文章
+> 帮我找 2026 年 3 月关于油价的报道
 ```
 
-### Metadata 字段说明
+**触发关键词：** `搜索`、`查找文章`、`dak search`、`dak feeds`
 
-| 字段 | 类型 | 说明 |
+### 大案牍术 (`skills/dak_summary`)
+
+> 基于 feed 数据生成结构化摘要
+
+利用 dak 搜索能力，从海量 feed 中提炼信息并生成两种摘要：
+
+- **每日总结** — 自动发现当天所有条目，去重筛选后按主题分组撰写摘要
+- **专题总结** — 跨时间维度搜索某个话题，按时间线梳理事件脉络
+
+```
+> 总结今天的新闻
+> 帮我梳理一下伊朗战争对油价和黄金的影响
+> 写一下最近 AI 领域的专题总结
+```
+
+**触发关键词：** `总结`、`生成每日总结`、`梳理XX事件`、`写专题总结`
+
+### 在其他项目中使用
+
+Skills 文件位于 `skills/` 目录，可直接复制到任何项目使用：
+
+```bash
+# 复制 skill 到你的项目
+cp -r skills/dak /your-project/.claude/skills/dak
+cp -r skills/dak_summary /your-project/.claude/skills/dak_summary
+
+# 确保 dak CLI 可用
+npm install -g @littlelittlecloud/dak
+```
+
+## dak CLI
+
+### 搜索
+
+```bash
+# 全文搜索（标题 + 正文）
+dak search "inflation"
+
+# 按分类 + 关键词
+dak search "oil price" -c finance --from 2026-03-01
+
+# 仅搜索标题（更精确）
+dak search "AI" --title-only -n 10
+
+# 按标签筛选
+dak search -t 中东 -t 地缘政治 --from 2026-03-01
+
+# JSON 输出（便于管道处理）
+dak search "tariff" --json -n 50
+```
+
+### 浏览
+
+```bash
+# 列出某天的所有条目
+dak feeds --from 2026-04-02 --to 2026-04-02 -n 100
+
+# 按分类浏览
+dak feeds -c tech -n 20
+
+# 按来源浏览，显示正文摘要
+dak feeds -s Bloomberg -n 10 --content
+```
+
+### 其他
+
+```bash
+# 查看索引统计
+dak stats
+
+# 搜索建议（自动补全）
+dak suggest "inflat"
+```
+
+### 完整选项
+
+| 选项 | 缩写 | 说明 |
 |------|------|------|
-| `title` | string | 文章标题 |
-| `source` | string | 来源订阅名称 |
-| `source_url` | string | RSS 源地址 |
-| `link` | string | 原文链接 |
-| `author` | string | 作者 |
-| `published` | ISO 8601 | 原文发布时间 |
-| `fetched` | ISO 8601 | 本地抓取时间 |
-| `category` | string | 分类 ID（对应 `categories.yaml`）|
-| `tags` | list | 标签列表 |
-| `language` | string | 语言代码 |
-| `guid` | string | RSS `<guid>` 唯一标识 |
-| `hash` | string | 内容摘要哈希，用于去重 |
-| `read` | bool | 是否已读 |
-| `starred` | bool | 是否收藏 |
+| `--category <cat>` | `-c` | 按分类过滤：`finance` / `news` / `social` / `tech` |
+| `--source <src>` | `-s` | 按来源过滤（模糊匹配） |
+| `--tag <tag>` | `-t` | 按标签过滤（可多次使用，OR 逻辑） |
+| `--author <author>` | `-a` | 按作者过滤 |
+| `--from <date>` | | 发布时间起始（YYYY-MM-DD，含） |
+| `--to <date>` | | 发布时间截止（YYYY-MM-DD，含） |
+| `--title-only` | | 仅搜索标题字段 |
+| `--limit <n>` | `-n` | 返回数量上限（默认 20） |
+| `--json` | | JSON 格式输出 |
+| `--content` | | 显示正文摘要 |
 
-## 技术栈
+## 编程 API
 
-- **运行时**: [Bun](https://bun.sh/)
-- **语言**: TypeScript
-- **后端依赖**: rss-parser, yaml, gray-matter
-- **前端**: Vite + React + TailwindCSS
-- **部署**: GitHub Pages（静态 SPA）
+```typescript
+import { getFeeds, getFeedsByCategory, createSearchIndex } from "@littlelittlecloud/dak";
 
-## 快速开始
+// 获取所有条目
+const all = getFeeds(); // FeedEntry[]
+
+// 按分类获取
+const finance = getFeedsByCategory("finance");
+
+// 创建搜索索引（建议复用）
+const index = createSearchIndex();
+
+// 搜索
+const results = index.search({
+  query: "inflation",
+  category: "finance",
+  dateFrom: "2026-03-01",
+  limit: 20,
+});
+
+results[0].entry.title;   // 标题
+results[0].entry.content; // 完整正文
+results[0].score;         // 相关度评分
+
+// 自动补全
+index.suggest("inflat");
+// → ["inflation", "inflationary", "inflated"]
+
+// 索引统计
+index.stats();
+// → { totalDocuments: 9707, categories: [...], sources: [...], ... }
+```
+
+### 更多 API
+
+| 函数 | 说明 |
+|------|------|
+| `getFeeds()` | 所有条目（按发布时间降序） |
+| `getFeedsByCategory(cat)` | 按分类 |
+| `getFeedsBySource(src)` | 按来源 |
+| `getFeedsByTags(tags)` | 按标签（OR） |
+| `getFeedById(id)` | 按 ID（hash） |
+| `getFeedsByDateRange(from, to)` | 按时间范围 |
+| `getCategories()` | 分类列表 |
+| `getSources()` | 来源列表 |
+| `getAllTags()` | 标签列表 |
+
+## 搜索能力
+
+基于 [MiniSearch](https://lucaong.github.io/minisearch/) 构建：
+
+- **全文检索** — 标题权重 3×、标签 2×、来源 1.5×、正文 1×
+- **模糊匹配** — 容错约 20% 字符距离（`inflaton` → `inflation`）
+- **前缀匹配** — `inflat` 匹配 `inflation`、`inflationary`
+- **多维过滤** — category、source、tags、author、language、date range
+- **过滤逻辑** — 各维度 AND 组合，tags 内部 OR
+
+## 数据源
+
+| 分类 | 内容 | 来源示例 |
+|------|------|---------|
+| `finance` | 财经、市场、宏观 | Bloomberg, CNBC, MarketWatch, ZeroHedge, 华尔街见闻 |
+| `news` | 国际新闻 | AP News, Al Jazeera, BBC 中文, Foreign Affairs |
+| `social` | 中文社交媒体 | 知乎热榜, 微博 |
+| `tech` | 技术 | Hacker News, 技术博客 |
+
+## 开发
+
+### RSS Feed 收集
 
 ```bash
-# 安装 Bun（如未安装）
-curl -fsSL https://bun.sh/install | bash
-
-# 安装依赖
 bun install
-
-# 查看帮助
-bun run help
+bun run fetch              # 抓取所有已启用的订阅源
+bun run fetch finance      # 只抓取 finance 分类
+bun run list               # 列出已保存的条目
+bun run sources            # 查看所有订阅源
 ```
 
-### 配置私有 RSSHub 地址
+### 添加订阅源
 
-1. 复制 `.env.example` 为 `.env`，并将 `RSSHUB_BASE_URL` 设置为你自己的 RSSHub 入口（不要提交到仓库）。
-2. 本地开发如需依赖 Docker 版 RSSHub，可保持默认的 `http://localhost:1200`。
-3. 在 `config/sources.yaml` 中，所有走 RSSHub 的路由都写成 `"{{RSSHUB_BASE_URL}}/xxx"`，程序会在运行时替换为真实地址，因此仓库里不会暴露私有 URL。
-
-## 使用方法
-
-```bash
-# 抓取所有已启用的订阅源
-bun run fetch
-
-# 只抓取某个分类
-bun run fetch tech
-
-# 只抓取名称包含关键词的源
-bun run fetch 雪球
-
-# 列出所有已保存的条目
-bun run list
-
-# 只列出某个分类的条目
-bun run list tech
-
-# 查看所有已配置的订阅源
-bun run sources
-```
-
-### 添加新订阅源
-
-编辑 `config/sources.yaml`，添加：
+编辑 `config/sources.yaml`：
 
 ```yaml
 - name: 订阅名称
   url: "{{RSSHUB_BASE_URL}}/example/route"
-  category: tech          # 对应 categories.yaml 中的分类 ID
+  category: tech
   enabled: true
   fetch_interval: 3600
   tags: [标签1, 标签2]
   description: 简短描述
 ```
 
-如果该订阅不依赖 RSSHub，可直接填真实 RSS 地址。配置完毕后运行 `bun run fetch` 即可。
-
-## Dashboard (SPA)
-
-项目包含一个静态 SPA Dashboard，可部署到 GitHub Pages。
+### 构建 dak 包
 
 ```bash
-# 生成静态数据 + 启动开发服务器
-bun run dev
-
-# 生成静态数据 + 构建生产版本
-bun run build
-
-# 预览构建结果
-bun run preview
-
-# 部署到 GitHub Pages
-bun run deploy
+cd pkg
+bun install
+bun run build          # 构建数据 + 编译 TypeScript
 ```
 
-Dashboard 包含：
-- 总览统计卡片（条目数、订阅源数、分类数、标签数）
-- 按分类 / 按来源柱状图
-- 近 30 天抓取活动热力图
-- 标签云
-- 条目列表（支持分类过滤和关键词搜索）
+### Dashboard
 
-## GitHub Pages 部署
+```bash
+bun run dev            # 开发服务器
+bun run build          # 构建生产版本
+bun run deploy         # 部署到 GitHub Pages
+```
 
-1. 确保已拉取最新 feeds：`bun run fetch`
-2. 构建：`bun run build`
-3. 部署：`bun run deploy`（将 `web/dist` 发布到 `gh-pages` 分支）
+## CI/CD
 
-或通过 GitHub Actions 自动化：定时运行 `fetch` + `build`，然后发布到 Pages。
+| Workflow | 触发 | 作用 |
+|----------|------|------|
+| `fetch-feeds` | 每 30 分钟 / 手动 | 抓取 RSS → 提交 → 部署 Pages → 发布 dak |
+| `publish-dak` | feeds 更新后自动 / 手动 | 构建并发布 `@littlelittlecloud/dak` 到 npm |
+| `deploy` | 手动 | 构建并部署 Dashboard 到 GitHub Pages |
 
-## 许可证
+## License
 
 MIT

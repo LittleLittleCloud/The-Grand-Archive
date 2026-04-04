@@ -16,7 +16,9 @@ const OUT_DIR = resolve(ROOT, "web/public/data");
 
 interface EntryData extends EntryMeta {
   content: string;
+  fullContent: string;
   filename: string;
+  path: string;
 }
 
 interface StatsData {
@@ -60,10 +62,14 @@ function readAllEntries(): EntryData[] {
       try {
         const raw = readFileSync(join(dir, file), "utf-8");
         const { data, content } = matter(raw);
+        const trimmed = content.trim();
+        const pathWithoutExt = `feeds/${catId}/${file.replace(/\.md$/, '')}`;
         entries.push({
           ...(data as EntryMeta),
-          content: content.trim().slice(0, 500), // 截取摘要
+          content: trimmed.slice(0, 500), // 截取摘要
+          fullContent: trimmed, // 完整内容 (用于 per-entry JSON)
           filename: file,
+          path: pathWithoutExt,
         });
       } catch {
         // skip malformed files
@@ -119,7 +125,7 @@ function generateStats(entries: EntryData[], sources: LoadedSource[], categories
       if (!d) return false;
       const t = new Date(d).getTime();
       return !isNaN(t) && Date.now() - t <= 3 * 24 * 60 * 60 * 1000;
-    }),
+    }).map(({ fullContent, ...rest }) => rest),
     lastUpdated: new Date().toISOString(),
     tagCloud,
   };
@@ -147,9 +153,11 @@ export function generateStaticData() {
   // Write categories
   writeFileSync(join(OUT_DIR, "categories.json"), JSON.stringify(categories, null, 2), "utf-8");
 
-  // Write entries per category
+  // Write entries per category (with summary only, no fullContent)
   for (const cat of categories) {
-    const catEntries = entries.filter((e) => e.category === cat.id);
+    const catEntries = entries
+      .filter((e) => e.category === cat.id)
+      .map(({ fullContent, ...rest }) => rest);
     writeFileSync(
       join(OUT_DIR, `entries-${cat.id}.json`),
       JSON.stringify(catEntries, null, 2),
@@ -158,11 +166,26 @@ export function generateStaticData() {
   }
 
   // Write all entries (light version without content for listing)
-  const entriesLight = entries.map(({ content, ...rest }) => rest);
+  const entriesLight = entries.map(({ content, fullContent, ...rest }) => rest);
   writeFileSync(join(OUT_DIR, "entries.json"), JSON.stringify(entriesLight, null, 2), "utf-8");
 
+  // Write per-entry JSON files with full content (for reading page)
+  let entryJsonCount = 0;
+  for (const entry of entries) {
+    const entryDir = join(OUT_DIR, "entry", ...entry.path.split("/").slice(0, -1));
+    mkdirSync(entryDir, { recursive: true });
+    const { fullContent, content: _summary, ...meta } = entry;
+    const entryWithContent = { ...meta, content: fullContent };
+    writeFileSync(
+      join(OUT_DIR, "entry", `${entry.path}.json`),
+      JSON.stringify(entryWithContent),
+      "utf-8"
+    );
+    entryJsonCount++;
+  }
+
   console.log(`✅ 静态数据已生成到 ${OUT_DIR}`);
-  console.log(`   ${entries.length} 条目 | ${sources.length} 订阅源 | ${categories.length} 分类`);
+  console.log(`   ${entries.length} 条目 | ${sources.length} 订阅源 | ${categories.length} 分类 | ${entryJsonCount} 条目详情`);
 }
 
 // Run directly

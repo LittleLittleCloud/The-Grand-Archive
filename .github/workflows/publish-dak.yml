@@ -1,0 +1,113 @@
+name: Publish dak to npm
+
+on:
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - none
+  # 被 fetch-feeds workflow 调用
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: pkg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build data from feeds
+        run: bun run build:data
+
+      - name: Build TypeScript
+        run: bun run build:ts
+
+      - name: Verify build output
+        run: |
+          echo "📦 Build output:"
+          ls -lh dist/
+          echo ""
+          echo "📊 Data:"
+          ls -lh data/feeds.json
+          echo ""
+          echo "🔍 Quick validation:"
+          node -e "
+            const { getFeeds, createSearchIndex } = await import('./dist/index.js');
+            const feeds = getFeeds();
+            const idx = createSearchIndex();
+            const stats = idx.stats();
+            console.log('  Feeds:', feeds.length);
+            console.log('  Categories:', stats.categories.join(', '));
+            console.log('  Date range:', stats.dateRange.earliest.slice(0,10), '~', stats.dateRange.latest.slice(0,10));
+          "
+
+      - name: Bump version
+        if: inputs.bump != 'none' && inputs.bump != ''
+        run: |
+          npm version ${{ inputs.bump || 'patch' }} --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "📌 Version bumped to $VERSION"
+
+      - name: Auto-bump patch (for auto-trigger)
+        if: inputs.bump == '' || inputs.bump == null
+        run: |
+          npm version patch --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "📌 Auto version bumped to $VERSION"
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit version bump
+        run: |
+          cd ..
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pkg/package.json
+          if ! git diff --cached --quiet; then
+            git commit -m "📦 dak v${VERSION}"
+            git push
+          fi
+
+      - name: Summary
+        run: |
+          echo "## 📦 Published @littlelittlecloud/dak v${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Feeds:** $(node -e "const{getFeeds}=await import('./dist/index.js');console.log(getFeeds().length)")" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **npm:** https://www.npmjs.com/package/@littlelittlecloud/dak" >> "$GITHUB_STEP_SUMMARY"
