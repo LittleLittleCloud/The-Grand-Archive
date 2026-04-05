@@ -51,6 +51,38 @@ sources:
     tags: [地缘政治, 外交, 深度]
     description: 外交事务杂志，国际关系深度分析
 
+  - name: The Diplomat
+    url: https://thediplomat.com/feed/
+    category: news
+    enabled: true
+    fetch_interval: 3600
+    tags: [地缘政治, 亚太, 深度]
+    description: 亚太时事与地缘政治深度分析
+
+  - name: 参考消息 · 第一关注
+    url: "{{RSSHUB_BASE_URL}}/cankaoxiaoxi/column/diyi"
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [国际, 时事]
+    description: 参考消息第一关注栏目 (via RSSHub)
+
+  - name: 参考消息 · 国际
+    url: "{{RSSHUB_BASE_URL}}/cankaoxiaoxi/column/gj"
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [国际, 地缘政治]
+    description: 参考消息国际栏目 (via RSSHub)
+
+  - name: 人民网
+    url: "{{RSSHUB_BASE_URL}}/people"
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [国内, 时事]
+    description: 人民网首页头条 (via RSSHub)
+
   - name: The Economist
     url: "{{RSSHUB_BASE_URL}}/economist/latest"
     category: news

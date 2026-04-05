@@ -1,9 +1,9 @@
 ````markdown
-# Topic Summary
+# 专题总结 (Topic Summary)
 
-> 父级 skill: [SKILL.md](SKILL.md) — 共享的 Feed 访问、Wikilink 格式、写作风格参见父级文件。
+> 大案牍术的应用场景之一。核心三步（海量查询 → 关联分析 → 结果输出）及共享规范参见 [SKILL.md](SKILL.md)。
 
-Generate a structured topic-focused summary by searching across daily summaries and raw feeds.
+跨时间维度对某个话题进行海量查询、关联分析后，输出结构化专题分析报告。
 
 ## 1. Clarify the Topic
 

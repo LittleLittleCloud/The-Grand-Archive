@@ -1,9 +1,9 @@
 ````markdown
-# Daily Summary
+# 每日总结 (Daily Summary)
 
-> 父级 skill: [SKILL.md](SKILL.md) — 共享的 Feed 访问、Wikilink 格式、写作风格参见父级文件。
+> 大案牍术的应用场景之一。核心三步（海量查询 → 关联分析 → 结果输出）及共享规范参见 [SKILL.md](SKILL.md)。
 
-Generate a structured daily digest note from feed posts.
+对某一天的全部 feed 数据进行海量查询、关联分析后，输出结构化每日新闻摘要。
 
 ## 1. Discover Posts
 

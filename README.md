@@ -4,6 +4,15 @@
 
 从多源 RSS 自动收集、分类、索引新闻与资讯，并以 npm 包的形式提供全文搜索与结构化访问。
 
+### 订阅源一览
+
+| 分类 | 源 |
+|------|-----|
+| **国际 / 地缘** | BBC 中文 · 纽约时报中文 · Al Jazeera · AP News · Foreign Affairs · The Diplomat · 参考消息 · 人民网 |
+| **财经 / 宏观** | Bloomberg · CNBC · MarketWatch · 华尔街见闻 · 第一财经 · 财新网 · ZeroHedge · 金十数据 · 雪球 |
+| **社交热点** | 微博热搜 · 知乎热榜 |
+| **科技** | Hacker News |
+
 ## Highlights
 
 - **AI as First Citizen** — 内置 Claude Skills，AI Agent 可直接搜索、总结、分析所有 feed 内容
@@ -42,12 +51,18 @@ npm install -g @littlelittlecloud/dak
 
 ### 大案牍术 (`skills/dak_summary`)
 
-> 基于 feed 数据生成结构化摘要
+> 基于 feed 数据的结构化分析方法论
 
-利用 dak 搜索能力，从海量 feed 中提炼信息并生成两种摘要：
+核心三步：**海量查询** → **关联分析** → **结果输出**
 
-- **每日总结** — 自动发现当天所有条目，去重筛选后按主题分组撰写摘要
-- **专题总结** — 跨时间维度搜索某个话题，按时间线梳理事件脉络
+1. **海量查询** — 通过 `dak` CLI 从 9700+ 条 feed 中广泛检索，中英文关键词多轮覆盖
+2. **关联分析** — 去重、交叉验证、模式识别（时间线/因果/趋势）、主题聚类
+3. **结果输出** — 写入结构化摘要文件
+
+两个典型应用场景：
+
+- **每日总结** — 对某天全部 feed 执行大案牍术，输出按主题分组的每日摘要
+- **专题总结** — 跨时间维度对某个话题执行大案牍术，按时间线梳理事件脉络
 
 ```
 > 总结今天的新闻
@@ -59,7 +74,13 @@ npm install -g @littlelittlecloud/dak
 
 ### 在其他项目中使用
 
-Skills 文件位于 `skills/` 目录，可直接复制到任何项目使用：
+推荐使用 `npx skills` 一键安装：
+
+```bash
+npx skills add LittleLittleCloud/The-Grand-Archive
+```
+
+或手动复制 skill 文件：
 
 ```bash
 # 复制 skill 到你的项目
@@ -190,12 +211,7 @@ index.stats();
 
 ## 数据源
 
-| 分类 | 内容 | 来源示例 |
-|------|------|---------|
-| `finance` | 财经、市场、宏观 | Bloomberg, CNBC, MarketWatch, ZeroHedge, 华尔街见闻 |
-| `news` | 国际新闻 | AP News, Al Jazeera, BBC 中文, Foreign Affairs |
-| `social` | 中文社交媒体 | 知乎热榜, 微博 |
-| `tech` | 技术 | Hacker News, 技术博客 |
+完整配置见 [`config/sources.yaml`](config/sources.yaml)，目前已启用 21 个订阅源，涵盖中英文财经、国际新闻、社交热点与技术社区。
 
 ## 开发
 

@@ -19,9 +19,14 @@ Search and access 大案牍库 feed entries via the `dak` CLI or programmatic AP
 - **CLI tool** for terminal usage with human-readable or JSON output
 - **Programmatic API** for use in scripts and other tools
 
-## CLI Reference
+### Update Frequency
+`dak` data is updated every 30 minutes. The data is built inside the `dak` package, so you need to update the package to get the latest feeds:
 
-After `npm link` in `pkg/`, the `dak` command is globally available:
+```bash
+npm install @littlelittlecloud/dak@latest
+```
+
+## CLI Reference
 
 ```bash
 dak <command> [options]
@@ -35,6 +40,7 @@ dak <command> [options]
 | `feeds [options]` | List/filter feed entries (no keyword needed) |
 | `stats` | Show index statistics (total docs, categories, sources, tags, date range) |
 | `suggest <query>` | Get autocomplete suggestions |
+| `check-update` | Check for the latest version on npm and compare with local |
 | `help` | Show help |
 
 ### Options
@@ -81,6 +87,9 @@ dak stats
 
 # Autocomplete suggestions
 dak suggest "inflat"
+
+# Check for latest npm version
+dak check-update
 ```
 
 ## JSON Output Schema

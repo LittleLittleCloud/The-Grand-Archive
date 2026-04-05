@@ -21,6 +21,7 @@
  *       --content            显示正文摘要
  */
 
+import { createRequire } from "node:module";
 import { createSearchIndex } from "./search.js";
 import { getFeeds, getCategories, getSources, getAllTags } from "./feeds.js";
 import type { SearchOptions, SearchResult } from "./types.js";
@@ -285,6 +286,65 @@ function cmdSuggest(parsed: ParsedArgs) {
   console.log("");
 }
 
+async function cmdCheckUpdate() {
+  const PKG_NAME = "@littlelittlecloud/dak";
+
+  // Read local version from package.json
+  let localVersion = "unknown";
+  try {
+    const require = createRequire(import.meta.url);
+    const pkg = require("../package.json");
+    localVersion = pkg.version ?? "unknown";
+  } catch {
+    // fallback — can't read local package.json
+  }
+
+  console.log(
+    `\n  ${COLORS.bold}检查 ${PKG_NAME} 最新版本…${COLORS.reset}\n`
+  );
+  console.log(`  本地版本:  ${COLORS.cyan}${localVersion}${COLORS.reset}`);
+
+  try {
+    const res = await fetch(`https://registry.npmjs.org/${PKG_NAME}/latest`);
+    if (!res.ok) {
+      console.log(
+        `  ${COLORS.yellow}⚠ 无法获取最新版本信息 (HTTP ${res.status})${COLORS.reset}\n`
+      );
+      return;
+    }
+
+    const data = (await res.json()) as { version: string; description?: string; dist?: { tarball?: string; unpackedSize?: number } };
+    const latestVersion = data.version;
+
+    console.log(`  最新版本:  ${COLORS.green}${latestVersion}${COLORS.reset}`);
+
+    if (localVersion === latestVersion) {
+      console.log(
+        `\n  ${COLORS.green}✔ 已是最新版本${COLORS.reset}\n`
+      );
+    } else {
+      console.log(
+        `\n  ${COLORS.yellow}⬆ 有新版本可用！运行以下命令更新:${COLORS.reset}`
+      );
+      console.log(
+        `    ${COLORS.bold}npm install ${PKG_NAME}@latest${COLORS.reset}\n`
+      );
+    }
+
+    // Show extra info
+    if (data.description) {
+      console.log(`  📦 ${COLORS.dim}${data.description}${COLORS.reset}`);
+    }
+    console.log(
+      `  🔗 ${COLORS.dim}https://www.npmjs.com/package/${PKG_NAME}${COLORS.reset}\n`
+    );
+  } catch (err) {
+    console.log(
+      `  ${COLORS.yellow}⚠ 网络错误，无法连接 npm registry${COLORS.reset}\n`
+    );
+  }
+}
+
 function printHelp() {
   console.log(`
   ${COLORS.bold}dak${COLORS.reset} — 大案牍库 CLI 搜索工具
@@ -294,6 +354,7 @@ function printHelp() {
     dak feeds [options]              列出 feed 条目
     dak stats                        显示索引统计
     dak suggest <query>              获取搜索建议
+    dak check-update                 检查 npm 最新版本
     dak help                         显示帮助
 
   ${COLORS.bold}搜索选项:${COLORS.reset}
@@ -316,6 +377,7 @@ function printHelp() {
     dak feeds -t 经济 -t 美国 --content
     dak stats
     dak suggest "inflat"
+    dak check-update
 `);
 }
 
@@ -342,6 +404,11 @@ switch (parsed.command) {
   case "suggest":
   case "ac":
     cmdSuggest(parsed);
+    break;
+  case "check-update":
+  case "update":
+  case "cu":
+    cmdCheckUpdate();
     break;
   case "help":
   case "--help":
