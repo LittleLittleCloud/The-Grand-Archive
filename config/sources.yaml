@@ -197,6 +197,30 @@ sources:
     tags: [A股, 研报]
     description: 东方财富策略研报 (via RSSHub)
 
+  - name: 财联社电报
+    url: "{{RSSHUB_BASE_URL}}/cls/telegraph"
+    category: finance
+    enabled: true
+    fetch_interval: 900
+    tags: [A股, 财经, 快讯]
+    description: 财联社电报快讯 (via RSSHub)
+
+  - name: 东方财富财经资讯
+    url: "{{RSSHUB_BASE_URL}}/eastmoney/search/A%E8%82%A1"
+    category: finance
+    enabled: true
+    fetch_interval: 1800
+    tags: [A股, 财经, 资讯]
+    description: 东方财富A股资讯 (via RSSHub)
+
+  - name: 同花顺实时快讯
+    url: "{{RSSHUB_BASE_URL}}/10jqka/realtimenews"
+    category: finance
+    enabled: true
+    fetch_interval: 900
+    tags: [A股, 快讯, 行情]
+    description: 同花顺7×24小时实时快讯 (via RSSHub)
+
   - name: Investing.com 经济日历
     url: "{{RSSHUB_BASE_URL}}/investing/calendar"
     category: finance
@@ -217,7 +241,7 @@ sources:
   - name: 微博热搜
     url: "{{RSSHUB_BASE_URL}}/weibo/search/hot"
     category: social
-    enabled: true
+    enabled: false  # RSSHub 路由 503，暂时禁用
     fetch_interval: 1800
     tags: [微博, 热搜]
     description: 微博实时热搜 (via RSSHub)

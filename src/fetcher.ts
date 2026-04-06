@@ -94,7 +94,6 @@ function entryExists(categoryDir: string, guid: string, hash: string): boolean {
   const files = readdirSync(categoryDir).filter((f) => f.endsWith(".md"));
   for (const file of files) {
     try {
-      const content = Bun.file(join(categoryDir, file));
       // 简单检查文件名中是否包含 hash，避免每次都完整解析
       // Skip 0-byte files — they are incomplete writes that should be retried
       if (file.includes(hash) && statSync(join(categoryDir, file)).size > 0) return true;
