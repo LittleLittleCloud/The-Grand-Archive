@@ -1,0 +1,116 @@
+大案牍库 — Monorepo Layout (Bun Workspaces)
+=============================================
+
+packages/
+├── contract/                 @dak/contract — shared API contract
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/
+│       ├── index.ts          re-exports everything
+│       ├── schemas.ts        Zod schemas (Entry, SearchRequest, SearchResponse, IngestRequest …)
+│       ├── types.ts          derived TS types via z.infer<>
+│       └── routes.ts         route constants & HTTP method definitions
+│
+├── server/                   @dak/server — Hono API server
+│   ├── package.json          deps: hono, minisearch, @dak/contract
+│   ├── tsconfig.json
+│   ├── Dockerfile            Bun + Litestream multi-stage build
+│   ├── litestream.yml        Litestream → R2 备份配置
+│   ├── fly.toml              Fly.io 部署配置 (volume mount /data)
+│   └── src/
+│       ├── index.ts          Hono app bootstrap + Bun.serve
+│       ├── routes/
+│       │   ├── search.ts     GET  /api/search
+│       │   ├── feeds.ts      GET  /api/feeds, GET /api/feeds/:id
+│       │   ├── stats.ts      GET  /api/stats
+│       │   ├── ingest.ts     POST /api/entries  (api-key-protected)
+│       │   └── auth.ts       POST /api/auth/login
+│       │                     POST /api/auth/logout
+│       │                     GET  /api/auth/me
+│       │                     POST /api/api-keys          创建 API key
+│       │                     GET  /api/api-keys          列出当前用户 keys
+│       │                     DELETE /api/api-keys/:id   撤销 key
+│       ├── middleware/
+│       │   ├── session.ts    cookie-based session (login 场景)
+│       │   └── api-key.ts    Bearer token / X-API-Key header 校验 (SDK/Worker 场景)
+│       ├── auth/
+│       │   ├── password.ts   argon2 hash + verify
+│       │   └── api-key.ts    key 生成 (crypto.randomUUID) + hash 存储 + 前缀匹配
+│       ├── search/
+│       │   └── engine.ts     MiniSearch index build & query logic
+│       ├── db/
+│       │   ├── schema.ts     DB table definitions (entries, users, api_keys, sessions)
+│       │   ├── client.ts     bun:sqlite client (DB_PATH=/data/dak.db, WAL mode)
+│       │   └── migrations/   schema migrations
+│       └── static/           built @dak/ui assets (copied at build time)
+│
+├── ui/                       @dak/ui — React SPA
+│   ├── package.json          deps: react, react-dom, @dak/contract
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── index.html
+│   └── src/
+│       ├── main.tsx
+│       ├── App.tsx
+│       ├── api.ts            typed HTTP client using @dak/contract types
+│       ├── router.ts
+│       ├── components/
+│       └── types.ts          re-exports from @dak/contract
+│
+├── sdk/                      @dak/sdk — query SDK (npm published)
+│   ├── package.json          deps: @dak/contract
+│   ├── tsconfig.json
+│   ├── tsup.config.ts
+│   └── src/
+│       ├── index.ts          re-exports search + feeds
+│       ├── client.ts         HTTP client (fetch-based, configurable base URL)
+│       ├── search.ts         search() wrapper
+│       ├── feeds.ts          getFeeds(), getFeedsByCategory(), etc.
+│       └── types.ts          re-exports from @dak/contract
+│
+├── cli/                      @dak/cli — CLI tool (npm published, bin: dak)
+│   ├── package.json          deps: @dak/sdk
+│   ├── tsconfig.json
+│   └── src/
+│       ├── index.ts          arg parser + command dispatch
+│       ├── commands/
+│       │   ├── search.ts     dak search <query> [options]
+│       │   ├── feeds.ts      dak feeds [options]
+│       │   ├── stats.ts      dak stats
+│       │   └── suggest.ts    dak suggest <query>
+│       └── output.ts         formatters (table, JSON)
+│
+└── ingestion-worker/         @dak/ingestion-worker — RSS ingestion worker
+    ├── package.json          deps: rss-parser, turndown, @dak/contract
+    ├── tsconfig.json
+    └── src/
+        ├── index.ts          entry point (cron or CLI trigger)
+        ├── fetcher.ts        RSS/Atom fetch via rss-parser
+        ├── parser.ts         HTML→Markdown (turndown), extract metadata
+        ├── dedup.ts          content hash dedup
+        ├── uploader.ts       POST entries to @dak/server ingestion API
+        └── config/
+            ├── sources.yaml  subscription source definitions
+            └── categories.yaml
+
+config/                       (root-level, shared config for local dev)
+├── .env.example              RSSHUB_BASE_URL, DAK_SERVER_URL, DAK_API_KEY,
+│                             R2_ACCESS_KEY, R2_SECRET_KEY, R2_ENDPOINT
+└── rsshub/
+    └── fly.toml              RSSHub deployment config
+
+skills/                       Claude Code / AI Agent skills
+├── dak/
+│   └── SKILL.md
+└── dak_summary/
+    └── SKILL.md
+
+doc/
+├── architecture.drawio       system + package architecture diagrams
+└── REPO_LAYOUT               this file
+
+daily_summary/                AI-generated daily news summaries
+topic_summary/                AI-generated topic analysis reports
+
+package.json                  root — bun workspaces config
+tsconfig.json                 root — shared TS config

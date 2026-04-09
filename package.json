@@ -15,6 +15,7 @@
     "deploy": "bun run build && cd web && npx gh-pages -d dist"
   },
   "devDependencies": {
+    "@drawio/mcp": "^1.2.2",
     "@types/bun": "latest",
     "@types/node": "^25.5.0",
     "@types/turndown": "^5.0.6"
