@@ -347,10 +347,10 @@ JWT_SECRET=<random-32-bytes>
 COOKIE_DOMAIN=dak.example.com
 
 # Litestream → R2
-LITESTREAM_REPLICA_URL=s3://dak-backup/dak.db
-LITESTREAM_ACCESS_KEY_ID=<r2-key>
-LITESTREAM_SECRET_ACCESS_KEY=<r2-secret>
-LITESTREAM_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_REPLICA_URL=s3://dak-backup/dak.db
+R2_ACCESS_KEY_ID=<r2-key>
+R2_SECRET_ACCESS_KEY=<r2-secret>
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 
 # Worker
 DAK_SERVER_URL=https://dak.example.com
@@ -416,7 +416,70 @@ skills/                     dak, dak_summary, dak_v2
 
 ---
 
-## 12. 演进路线
+## 12. 本地开发
+
+### 启动
+
+```bash
+# 1. 安装依赖（根目录）
+bun install
+
+# 2. 启动 server（自动创建 SQLite DB: ./data/dak.db）
+cd packages/server && bun run dev
+# → http://localhost:3000/health
+
+# 3.（可选）启动 UI（Vite dev proxy /api → :3000）
+cd packages/ui && bun run dev
+# → http://localhost:5173
+```
+
+### 创建管理员 + API Key
+
+DB 初始为空，需手动创建第一个用户：
+
+```bash
+bun -e "
+import { Database } from 'bun:sqlite';
+const db = new Database('./data/dak.db');
+const hash = await Bun.password.hash('your-password', { algorithm: 'argon2id' });
+db.run('INSERT INTO users (id, username, password, role, plan) VALUES (?, ?, ?, ?, ?)',
+  [crypto.randomUUID(), 'admin', hash, 'admin', 'premium']);
+console.log('✅ Admin user created');
+"
+```
+
+然后通过 API 登录并创建 API Key：
+
+```bash
+# 登录
+curl -c cookies.txt -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"your-password"}'
+
+# 创建 API Key
+curl -b cookies.txt -X POST http://localhost:3000/api/api-keys \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"dev"}'
+# → 返回 { "key": "dak_xxx...", ... }  ← 仅此一次显示明文
+```
+
+### 运行 Ingestion Worker
+
+```bash
+DAK_SERVER_URL=http://localhost:3000 DAK_API_KEY=dak_xxx \
+  bun run packages/ingestion-worker/src/index.ts
+```
+
+### CLI
+
+```bash
+DAK_SERVER_URL=http://localhost:3000 DAK_API_KEY=dak_xxx \
+  bun run packages/cli/src/index.ts search "tariff"
+```
+
+---
+
+## 13. 演进路线
 
 | 阶段 | 内容 |
 |---|---|

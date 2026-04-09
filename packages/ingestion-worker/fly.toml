@@ -1,0 +1,16 @@
+app = "dak-worker"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "../../packages/ingestion-worker/Dockerfile"
+
+[env]
+  DAK_SERVER_URL = "https://dak-server.fly.dev"
+  INTERVAL_MS = "1800000"
+
+# No HTTP service — this is a background worker
+# Prevent auto-suspend so the timer keeps running
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

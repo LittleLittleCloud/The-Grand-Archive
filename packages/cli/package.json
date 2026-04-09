@@ -1,0 +1,11 @@
+{
+  "name": "@dak/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "dak": "./src/index.ts"
+  },
+  "dependencies": {
+    "@dak/sdk": "workspace:*"
+  }
+}

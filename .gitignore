@@ -21,6 +21,7 @@ bun.lock
 
 # Generated
 web/public/data/
+packages/server/data/
 
 # Env
 .env
