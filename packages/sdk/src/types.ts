@@ -54,6 +54,8 @@ export interface SearchResponse {
 export interface FeedsRequest {
   category?: string;
   source?: string;
+  from?: string;
+  to?: string;
   limit?: number;
   offset?: number;
 }

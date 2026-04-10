@@ -8,6 +8,8 @@ export async function feedsCommand(client: DakClient, args: string[]) {
   const result = await client.getFeeds({
     category: flags.category,
     source: flags.source,
+    from: flags.from,
+    to: flags.to,
     limit: flags.limit ? parseInt(flags.limit, 10) : undefined,
     offset: flags.offset ? parseInt(flags.offset, 10) : undefined,
   });

@@ -60,6 +60,8 @@ export const SearchResponseSchema = z.object({
 export const FeedsRequestSchema = z.object({
   category: z.string().optional(),
   source: z.string().optional(),
+  from: z.string().optional(), // ISO 8601
+  to: z.string().optional(), // ISO 8601
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 });

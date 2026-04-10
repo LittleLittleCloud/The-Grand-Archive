@@ -8,6 +8,8 @@ feedsRoutes.get("/feeds", (c) => {
   const parsed = FeedsRequestSchema.safeParse({
     category: c.req.query("category"),
     source: c.req.query("source"),
+    from: c.req.query("from"),
+    to: c.req.query("to"),
     limit: c.req.query("limit"),
     offset: c.req.query("offset"),
   });
@@ -19,7 +21,7 @@ feedsRoutes.get("/feeds", (c) => {
     );
   }
 
-  const { category, source, limit, offset } = parsed.data;
+  const { category, source, from, to, limit, offset } = parsed.data;
   const maxAge = c.get("maxAge") as string | null;
   const db = getDb();
 
@@ -33,6 +35,14 @@ feedsRoutes.get("/feeds", (c) => {
   if (source) {
     conditions.push("source = ?");
     params.push(source);
+  }
+  if (from) {
+    conditions.push("published >= ?");
+    params.push(from);
+  }
+  if (to) {
+    conditions.push("published <= ?");
+    params.push(to + "T23:59:59.999Z");
   }
   if (maxAge) {
     conditions.push("published >= ?");
