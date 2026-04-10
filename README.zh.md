@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/LittleLittleCloud/The-Grand-Archive?style=social)](https://github.com/LittleLittleCloud/The-Grand-Archive)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **一行命令，让你的 AI Agent 拥有跨 21 个信源的实时新闻搜索能力。**
+> **大案牍库是一款让你的 AI Agent 拥有跨 20+ 个信源实时新闻搜索能力的工具。**
 
 [English Version](README.md)
 
@@ -144,11 +144,10 @@ npm install -g @littlelittlecloud/dak-cli
 
 ## CLI 参考
 
-使用前设置服务器地址：
+CLI 默认连接 `https://dak-server.fly.dev`。设置 API Key 可解锁高级访问权限：
 
 ```bash
-export DAK_SERVER_URL=https://dak-server.fly.dev  # 默认 http://localhost:3000
-export DAK_API_KEY=your-api-key                    # 可选，用于认证访问
+export DAK_API_KEY=your-api-key  # 高级订阅必填（90 天历史数据 + 更高请求限额）
 ```
 
 ### 搜索

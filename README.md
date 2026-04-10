@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/LittleLittleCloud/The-Grand-Archive?style=social)](https://github.com/LittleLittleCloud/The-Grand-Archive)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **One line to give your AI agent real-time news search across 21 sources.**
+> **The Grand Archive is a tool that gives your AI agent real-time news search across 20+ sources.**
 
 [中文版](README.zh.md)
 
@@ -143,11 +143,10 @@ npm install -g @littlelittlecloud/dak-cli
 
 ## CLI Reference
 
-Set server URL before use:
+The CLI connects to `https://dak-server.fly.dev` by default. Set an API key to unlock premium access:
 
 ```bash
-export DAK_SERVER_URL=https://dak-server.fly.dev  # default: http://localhost:3000
-export DAK_API_KEY=your-api-key                    # optional, for authenticated access
+export DAK_API_KEY=your-api-key  # required for premium tier (90-day history and higher rate limits)
 ```
 
 ### Search
