@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "./api";
 import type { StatsResponse } from "@dak/contract";
 
@@ -17,13 +18,13 @@ const SOURCES: Record<string, string[]> = {
   "Social Trending": ["Weibo Hot", "Zhihu Hot"],
 };
 
-const FEATURES = [
-  { title: "AI-Native", desc: "Claude Skills built in. Your agent searches, filters, and summarizes without extra setup." },
-  { title: "Full-Text Search", desc: "Fuzzy + prefix matching across every entry. Multi-dimensional filters by category, source, and date." },
-  { title: "21 Live Sources", desc: "Finance, geopolitics, tech, and social trending — updated every 30 minutes." },
-  { title: "TypeScript SDK", desc: "Typed HTTP client. Supports ESM and CJS. One npm install away." },
-  { title: "CLI Tool", desc: "dak search \"tariff\" — one-liner searches and feed browsing from your terminal." },
-  { title: "Tiered Access", desc: "Anonymous (28 days), Free (90 days), Premium (unlimited history and higher rate limits)." },
+const FEATURES_KEYS = [
+  { titleKey: "features.aiNative", descKey: "features.aiNativeDesc" },
+  { titleKey: "features.fullTextSearch", descKey: "features.fullTextSearchDesc" },
+  { titleKey: "features.liveSources", descKey: "features.liveSourcesDesc" },
+  { titleKey: "features.sdk", descKey: "features.sdkDesc" },
+  { titleKey: "features.cli", descKey: "features.cliDesc" },
+  { titleKey: "features.tieredAccess", descKey: "features.tieredAccessDesc" },
 ];
 
 const CODE_TABS = [
@@ -79,15 +80,16 @@ $ dak search "inflation" --category finance
   },
 ];
 
-const STEPS = [
-  { num: "01", title: "Install", desc: "npm install @littlelittlecloud/dak — or add the Claude Skill to your AI agent." },
-  { num: "02", title: "Query", desc: "Search with the SDK, CLI, or natural language through your AI agent." },
-  { num: "03", title: "Analyze", desc: "Get structured results with metadata — source, date, category, relevance score." },
+const STEPS_KEYS = [
+  { num: "01", titleKey: "steps.installTitle", descKey: "steps.installDesc" },
+  { num: "02", titleKey: "steps.queryTitle", descKey: "steps.queryDesc" },
+  { num: "03", titleKey: "steps.analyzeTitle", descKey: "steps.analyzeDesc" },
 ];
 
 /* ─── Component ─── */
 
 export function LandingPage() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [activeTab, setActiveTab] = useState(0);
 
@@ -109,16 +111,14 @@ export function LandingPage() {
                 className="text-on-primary font-extrabold leading-tight"
                 style={{ fontFamily: "var(--font-display)", fontSize: "3.5rem" }}
               >
-                A Living Archive
-                <br />
-                of the World's News
+                {t("hero.title1")}
+                {t("hero.title2") && <><br />{t("hero.title2")}</>}
               </h1>
               <p
                 className="mt-4 text-on-primary/70 max-w-xl leading-relaxed"
                 style={{ fontFamily: "var(--font-body)", fontSize: "1.05rem" }}
               >
-                14,000+ entries from 21 sources. Updated every 30 minutes.
-                Built for AI agents and developers.
+                {t("hero.subtitle")}
               </p>
               <div className="mt-6 flex flex-wrap gap-4">
                 <a
@@ -131,7 +131,7 @@ export function LandingPage() {
                     background: "#5865F2",
                   }}
                 >
-                  Join Discord
+                  {t("hero.discord")}
                 </a>
                 <a
                   href="https://github.com/littlelittlecloud/The-Grand-Archive"
@@ -144,7 +144,7 @@ export function LandingPage() {
                     textUnderlineOffset: "4px",
                   }}
                 >
-                  View on GitHub
+                  {t("hero.github")}
                 </a>
               </div>
             </div>
@@ -195,7 +195,7 @@ export function LandingPage() {
                 background: "var(--color-primary)",
               }}
             >
-              Tracking
+              {t("hero.tracking")}
             </span>
             <div className="ticker-track">
               {[0, 1].map((copy) => (
@@ -229,13 +229,13 @@ export function LandingPage() {
       {stats && (
         <section className="bg-surface">
           <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 lg:grid-cols-4 gap-8">
-            <StatFigure value={stats.total.toLocaleString()} label="Total Entries" />
-            <StatFigure value={String(stats.byCategory.length)} label="Categories" />
-            <StatFigure value={String(stats.bySource.length)} label="Sources" />
+            <StatFigure value={stats.total.toLocaleString()} label={t("stats.totalEntries")} />
+            <StatFigure value={String(stats.byCategory.length)} label={t("stats.categories")} />
+            <StatFigure value={String(stats.bySource.length)} label={t("stats.sources")} />
             {stats.lastUpdated && (
               <StatFigure
                 value={new Date(stats.lastUpdated).toLocaleDateString()}
-                label="Last Updated"
+                label={t("stats.lastUpdated")}
               />
             )}
           </div>
@@ -249,22 +249,22 @@ export function LandingPage() {
             className="text-on-surface mb-12"
             style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
           >
-            Capabilities
+            {t("features.title")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
-            {FEATURES.map((f) => (
-              <div key={f.title}>
+            {FEATURES_KEYS.map((f) => (
+              <div key={f.titleKey}>
                 <h3
                   className="text-on-surface mb-2"
                   style={{ fontFamily: "var(--font-body)", fontSize: "1.125rem", fontWeight: 600 }}
                 >
-                  {f.title}
+                  {t(f.titleKey)}
                 </h3>
                 <p
                   className="text-on-surface-variant leading-relaxed"
                   style={{ fontFamily: "var(--font-body)", fontSize: "1rem" }}
                 >
-                  {f.desc}
+                  {t(f.descKey)}
                 </p>
               </div>
             ))}
@@ -278,7 +278,7 @@ export function LandingPage() {
           className="text-on-surface mb-8"
           style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
         >
-          Integration
+          {t("integration.title")}
         </h2>
 
         {/* Tabs — archive tags */}
@@ -333,10 +333,10 @@ export function LandingPage() {
             className="text-on-surface mb-12"
             style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
           >
-            Three Steps
+            {t("steps.title")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {STEPS.map((s) => (
+            {STEPS_KEYS.map((s) => (
               <div key={s.num}>
                 <span
                   className="block mb-3"
@@ -353,13 +353,13 @@ export function LandingPage() {
                   className="text-on-surface mb-2"
                   style={{ fontFamily: "var(--font-body)", fontSize: "1.125rem", fontWeight: 600 }}
                 >
-                  {s.title}
+                  {t(s.titleKey)}
                 </h3>
                 <p
                   className="text-on-surface-variant leading-relaxed"
                   style={{ fontFamily: "var(--font-body)", fontSize: "1rem" }}
                 >
-                  {s.desc}
+                  {t(s.descKey)}
                 </p>
               </div>
             ))}
@@ -374,7 +374,7 @@ export function LandingPage() {
             className="text-on-surface mb-12"
             style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
           >
-            Access Tiers
+            {t("tiers.title")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Anonymous */}
@@ -383,31 +383,31 @@ export function LandingPage() {
                 className="uppercase text-on-surface-variant"
                 style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.08em" }}
               >
-                Anonymous
+                {t("tiers.anonymous")}
               </span>
               <p
                 className="mt-4 text-on-surface"
                 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800 }}
               >
-                28 days
+                {t("tiers.days28")}
               </p>
               <p
                 className="mt-1 text-on-surface-variant"
                 style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.03em" }}
               >
-                of search history
+                {t("tiers.ofSearchHistory")}
               </p>
               <ul className="mt-6 space-y-2" style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem" }}>
-                <li className="text-on-surface-variant">Full-text search</li>
-                <li className="text-on-surface-variant">All categories &amp; sources</li>
-                <li className="text-on-surface-variant">10 requests / min</li>
+                <li className="text-on-surface-variant">{t("tiers.fullTextSearch")}</li>
+                <li className="text-on-surface-variant">{t("tiers.allCategoriesSources")}</li>
+                <li className="text-on-surface-variant">{t("tiers.rateLimit10")}</li>
               </ul>
               <div className="mt-8">
                 <span
                   className="text-on-surface-variant"
                   style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.05em" }}
                 >
-                  No sign-up required
+                  {t("tiers.noSignUp")}
                 </span>
               </div>
             </div>
@@ -421,25 +421,25 @@ export function LandingPage() {
                 className="uppercase"
                 style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.08em", color: "var(--color-tertiary-fixed-dim)" }}
               >
-                Free
+                {t("tiers.free")}
               </span>
               <p
                 className="mt-4 text-on-primary"
                 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800 }}
               >
-                90 days
+                {t("tiers.days90")}
               </p>
               <p
                 className="mt-1 text-on-primary/60"
                 style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.03em" }}
               >
-                of search history
+                {t("tiers.ofSearchHistory")}
               </p>
               <ul className="mt-6 space-y-2" style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem" }}>
-                <li className="text-on-primary/80">Full-text search</li>
-                <li className="text-on-primary/80">All categories &amp; sources</li>
-                <li className="text-on-primary/80">API key access</li>
-                <li className="text-on-primary/80">60 requests / min</li>
+                <li className="text-on-primary/80">{t("tiers.fullTextSearch")}</li>
+                <li className="text-on-primary/80">{t("tiers.allCategoriesSources")}</li>
+                <li className="text-on-primary/80">{t("tiers.apiKeyAccess")}</li>
+                <li className="text-on-primary/80">{t("tiers.rateLimit60")}</li>
               </ul>
               <div className="mt-8">
                 <a
@@ -447,7 +447,7 @@ export function LandingPage() {
                   className="inline-block px-5 py-2.5 bg-on-primary text-primary font-medium hover:bg-on-primary/90 transition-colors"
                   style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.05em" }}
                 >
-                  Sign in to get started
+                  {t("tiers.signInToStart")}
                 </a>
               </div>
             </div>
@@ -458,29 +458,29 @@ export function LandingPage() {
                 className="uppercase text-on-surface-variant"
                 style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.08em" }}
               >
-                Premium
+                {t("tiers.premium")}
               </span>
               <p
                 className="mt-4 text-on-surface"
                 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800 }}
               >
-                Unlimited
+                {t("tiers.unlimited")}
               </p>
               <p
                 className="mt-1 text-on-surface-variant"
                 style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.03em" }}
               >
-                full archive access
+                {t("tiers.fullArchiveAccess")}
               </p>
               <ul className="mt-6 space-y-2" style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem" }}>
-                <li className="text-on-surface-variant">Everything in Free</li>
-                <li className="text-on-surface-variant">Unlimited history</li>
-                <li className="text-on-surface-variant">120 requests / min</li>
-                <li className="text-on-surface-variant">Dedicated support</li>
+                <li className="text-on-surface-variant">{t("tiers.everythingInFree")}</li>
+                <li className="text-on-surface-variant">{t("tiers.unlimitedHistory")}</li>
+                <li className="text-on-surface-variant">{t("tiers.rateLimit120")}</li>
+                <li className="text-on-surface-variant">{t("tiers.dedicatedSupport")}</li>
               </ul>
               <div className="mt-8">
                 <a
-                  href="mailto:littlelittlecloud@gmail.com"
+                  href="mailto:bigmiao.zhang@gmail.com"
                   className="inline-block text-secondary hover:text-on-surface transition-colors"
                   style={{
                     fontFamily: "var(--font-label)",
@@ -490,7 +490,7 @@ export function LandingPage() {
                     textUnderlineOffset: "3px",
                   }}
                 >
-                  Contact us
+                  {t("tiers.contactUs")}
                 </a>
               </div>
             </div>
@@ -508,13 +508,13 @@ export function LandingPage() {
               className="text-on-surface font-bold"
               style={{ fontFamily: "var(--font-display)", fontSize: "1.125rem" }}
             >
-              THE GRANT ARCHIVE
+              {t("footer.brand")}
             </span>
             <p
               className="mt-1 text-on-surface-variant"
               style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.05em" }}
             >
-              THE GRAND ARCHIVE
+              {t("footer.tagline")}
             </p>
           </div>
           <div className="flex gap-6">

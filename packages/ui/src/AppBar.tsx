@@ -1,4 +1,5 @@
 import type { User } from "@dak/contract";
+import { useTranslation } from "react-i18next";
 
 export function AppBar({
   user,
@@ -7,6 +8,12 @@ export function AppBar({
   user: User | null;
   onLogout: () => void;
 }) {
+  const { t, i18n } = useTranslation();
+
+  const toggleLang = () => {
+    i18n.changeLanguage(i18n.language.startsWith("zh") ? "en" : "zh");
+  };
+
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50"
@@ -27,16 +34,23 @@ export function AppBar({
             THE GRAND ARCHIVE
           </a>
           <nav className="hidden sm:flex items-center gap-6">
-            <NavLink href="#/">Home</NavLink>
-            <NavLink href="#/search">Search</NavLink>
+            <NavLink href="#/">{t("nav.home")}</NavLink>
+            <NavLink href="#/search">{t("nav.search")}</NavLink>
           </nav>
         </div>
 
-        {/* Right: auth */}
+        {/* Right: lang + auth */}
         <div className="flex items-center gap-4">
+          <button
+            onClick={toggleLang}
+            className="text-sm text-on-primary/60 hover:text-on-primary transition-colors cursor-pointer"
+            style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
+          >
+            {i18n.language.startsWith("zh") ? "EN" : "中文"}
+          </button>
           {user ? (
             <>
-              <NavLink href="#/api-keys">API Keys</NavLink>
+              <NavLink href="#/api-keys">{t("nav.apiKeys")}</NavLink>
               <span
                 className="text-sm text-on-primary/60"
                 style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
@@ -48,7 +62,7 @@ export function AppBar({
                 className="text-sm text-on-primary/60 hover:text-on-primary transition-colors cursor-pointer"
                 style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
               >
-                Sign out
+                {t("nav.signOut")}
               </button>
             </>
           ) : (
@@ -57,7 +71,7 @@ export function AppBar({
               className="px-4 py-1.5 bg-on-primary text-primary text-sm font-medium hover:bg-on-primary/90 transition-colors"
               style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
             >
-              Sign in
+              {t("nav.signIn")}
             </a>
           )}
         </div>
