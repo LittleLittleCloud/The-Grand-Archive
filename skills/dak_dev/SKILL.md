@@ -42,7 +42,7 @@ v2 将现有单体仓库拆为 **6 个 Bun workspace 包**，通过 `@dak/contra
 |---|---|---|
 | `@dak/contract` | zod | 零运行时依赖，纯类型/schema |
 | `@dak/server` | hono, minisearch, @dak/contract | 唯一包含 DB 和搜索引擎的包 |
-| `@dak/ui` | react, react-dom, @dak/contract | SPA，独立部署，通过 HTTP 调用 server |
+| `@dak/ui` | react, react-dom, jotai, zustand, @dak/contract | SPA，独立部署，通过 HTTP 调用 server |
 | `@dak/sdk` | @dak/contract | fetch-based HTTP client，npm 发布 |
 | `@dak/cli` | @dak/sdk | 终端工具，npm 发布 (bin: dak) |
 | `@dak/ingestion-worker` | rss-parser, turndown, @dak/contract | 仅依赖 contract，通过 HTTP 上传 |
@@ -96,6 +96,7 @@ v2 将现有单体仓库拆为 **6 个 Bun workspace 包**，通过 `@dak/contra
 | Auth | **自建** | Bun.password (argon2id) + hono/jwt + crypto.randomUUID |
 | Contract | **Zod** | schema = single source of truth，runtime 校验 + 类型推导 |
 | SPA | **React + Vite + Tailwind** | 现有 web/ 改造 |
+| State | **Jotai + Zustand** | Jotai 管理服务端/派生状态，Zustand 管理客户端 UI 状态 |
 | RSS | **rss-parser + turndown** | RSS/Atom 解析 + HTML→Markdown |
 | Build | **Bun workspaces** | monorepo，无需 turborepo |
 | Backup | **Litestream → Cloudflare R2** | WAL 流式备份，~1s 延迟，零性能损耗 |
@@ -392,7 +393,223 @@ skills/                     dak, dak_summary, dak_v2
 
 ---
 
-## 11. 开发约定
+## 11. UI 设计规范
+
+所有 UI 实现必须遵循 `DESIGN.md`（"Digital Curator" 设计体系）。以下为开发时的关键约束摘要。
+
+### 设计北极星
+我们构建的是**数字档案馆**，不是社交 feed。审美追求高端编辑出版物/现代学术图书馆的永恒感，拒绝"滚动内容"的廉价感。布局使用**非对称构图**（大号衬线标题 vs 密集元数据），通过"色调分层"管理信息密度。
+
+### 色彩与表面架构
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `surface` | `#fcf9f2` | 主阅读区域底色 |
+| `surface-dim` | — | 搜索栏等"内凹"区域 |
+| `surface-container-low` ~ `highest` | — | 侧边栏、卡片、嵌套层级 |
+| `primary` | `#041926` | 主色调、CTA 背景 |
+| `primary-container` | `#1a2e3b` | 渐变终点色 |
+| `on-primary` | `#ffffff` | primary 上的文字 |
+| `secondary` | `#4e6073` | 链接颜色（禁止使用蓝色链接） |
+| `tertiary_fixed_dim` | `#e9c176` | primary 背景上的 label 文字（金箔效果） |
+| `tertiary_container` | `#3b2900` | Archive Tag 背景 |
+| `tertiary_fixed` | `#ffdea5` | Archive Tag 文字 |
+| `outline-variant` | `#c3c7cc` | Ghost Border（仅在 15% 透明度下使用） |
+
+**禁止规则**：
+- ❌ 禁止使用 `1px solid` 边框分隔内容 → 用背景色切换/色调过渡替代
+- ❌ 禁止使用蓝色链接 → 用 `secondary` (#4e6073) 或 `primary` + 1px 下划线
+- ❌ 禁止使用 Material Design 标准阴影
+
+**必须规则**：
+- ✅ 浮动导航/菜单使用毛玻璃效果：`primary` 85% 不透明度 + `backdrop-blur: 20px`（"磨砂墨水"效果）
+- ✅ 主 CTA 和 hero 标题使用 `linear-gradient(135deg, #041926, #1a2e3b)`（"丝绸装帧"效果）
+- ✅ 浮动元素使用 Whisper Shadow：`0px 12px 32px rgba(28, 28, 24, 0.06)`
+- ✅ 所有圆角 = `0px`（这是设计系统的签名特征，不可妥协）
+
+### 字体体系
+
+| 类别 | Token | 字体 | 尺寸 | 用途 |
+|---|---|---|---|---|
+| Display | `display-lg` | Newsreader | 3.5rem | 编辑首页大标题 |
+| Headline | `headline-md` | Newsreader | 1.75rem | 分区标题、文章标题 |
+| Title | `title-md` | Inter | 1.125rem | 子标题、卡片标题 |
+| Body | `body-lg` | Inter | 1rem | 长文阅读正文 |
+| Label | `label-md` | Work Sans | 0.75rem | 元数据、时间戳、分类 |
+
+- Label 类文字在 `primary` 背景上使用 `tertiary_fixed_dim` (#e9c176)
+- Label 使用 `letter-spacing: 0.05em` 增强学术感
+
+### 组件规范
+
+**卡片和列表**：
+- 禁止使用分割线 → 使用垂直间距 (`8px` 倍数) 或交替背景色 (`surface` / `surface-container-low`)
+- "大案牍库" feed 使用 Block-Style 布局：日期 (`label-sm`) 在左侧空白列，标题在右侧
+
+**按钮**：
+- Primary：`primary` 背景 + `on-primary` 文字 + 直角 + hover 时底部 2px `tertiary` 色条
+- Tertiary (Ghost)：无背景 + `primary` 文字 + hover 时 `surface-container-high` 背景
+
+**输入框**：
+- 仅下划线样式，默认 `outline` 30% 透明度，focus 时 `primary` 2px 下划线
+- Label 使用 `label-md` + `on-surface-variant` 颜色
+
+**Archive Tag（Chips）**：
+- 矩形（非圆角药丸）+ `tertiary_container` 背景 + `tertiary_fixed` 文字 → 图书馆目录标签风格
+
+### 交互规范
+- 卡片 hover：背景从 `surface` 过渡到 `surface-container-lowest`（"高亮纸张"效果）
+- 所有间距遵循 8px 网格
+- 以文字标签 (`label-md`) 为主要导航方式，图标不作为主导航
+
+### Tailwind 实现提示
+在 `tailwind.config` 中将以上设计 token 映射为 Tailwind 主题变量。例如：
+
+```typescript
+// tailwind.config.ts (示意)
+export default {
+  theme: {
+    extend: {
+      colors: {
+        surface: '#fcf9f2',
+        primary: '#041926',
+        'primary-container': '#1a2e3b',
+        'on-primary': '#ffffff',
+        secondary: '#4e6073',
+        'tertiary-fixed-dim': '#e9c176',
+        'tertiary-container': '#3b2900',
+        'tertiary-fixed': '#ffdea5',
+        'outline-variant': '#c3c7cc',
+      },
+      fontFamily: {
+        display: ['Newsreader', 'serif'],
+        headline: ['Newsreader', 'serif'],
+        title: ['Inter', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+        label: ['Work Sans', 'sans-serif'],
+      },
+      borderRadius: {
+        DEFAULT: '0px', // 全局直角
+      },
+      boxShadow: {
+        whisper: '0px 12px 32px rgba(28, 28, 24, 0.06)',
+      },
+    },
+  },
+};
+```
+
+组件中使用 `rounded-none`（或依赖全局 `0px` 默认值），禁止出现 `rounded-md`、`rounded-lg` 等。
+
+### 状态管理（Jotai + Zustand）
+
+**核心原则**：禁止 prop drilling — 组件不接收大量 props / handler，而是直接消费 atom 或 store。
+
+**分工**：
+
+| 库 | 职责 | 示例 |
+|---|---|---|
+| **Jotai** (atoms) | 服务端数据、派生/计算状态、URL 同步状态 | 搜索结果、feed 列表、当前用户、筛选条件 |
+| **Zustand** (stores) | 纯客户端 UI 状态、跨组件共享的交互状态 | sidebar 开关、modal 可见性、表单草稿、滚动位置 |
+
+**Jotai 用法规范**：
+
+```typescript
+// atoms/search.ts
+import { atom } from 'jotai';
+import { atomWithQuery } from 'jotai-tanstack-query'; // 或自定义 async atom
+
+// 原始 atom — URL 搜索参数
+export const searchQueryAtom = atom('');
+export const categoryFilterAtom = atom<string | null>(null);
+
+// 派生 atom — 自动跟踪依赖
+export const searchParamsAtom = atom((get) => ({
+  q: get(searchQueryAtom),
+  category: get(categoryFilterAtom),
+}));
+
+// 异步 atom — 服务端数据
+export const searchResultsAtom = atom(async (get) => {
+  const params = get(searchParamsAtom);
+  const res = await fetch(`/api/search?${new URLSearchParams(params)}`);
+  return res.json();
+});
+```
+
+```typescript
+// 组件直接消费 atom，无需 props
+import { useAtomValue, useSetAtom } from 'jotai';
+
+function SearchBar() {
+  const setQuery = useSetAtom(searchQueryAtom);
+  return <input onChange={(e) => setQuery(e.target.value)} />;
+}
+
+function ResultsList() {
+  const results = useAtomValue(searchResultsAtom);
+  return results.map(r => <ResultCard key={r.id} entry={r} />);
+}
+```
+
+**Zustand 用法规范**：
+
+```typescript
+// stores/ui.ts
+import { create } from 'zustand';
+
+interface UIStore {
+  sidebarOpen: boolean;
+  toggleSidebar: () => void;
+  activeModal: string | null;
+  openModal: (id: string) => void;
+  closeModal: () => void;
+}
+
+export const useUIStore = create<UIStore>((set) => ({
+  sidebarOpen: false,
+  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  activeModal: null,
+  openModal: (id) => set({ activeModal: id }),
+  closeModal: () => set({ activeModal: null }),
+}));
+```
+
+```typescript
+// 组件通过 selector 消费，自动优化 re-render
+function Sidebar() {
+  const open = useUIStore((s) => s.sidebarOpen);
+  if (!open) return null;
+  return <nav>...</nav>;
+}
+```
+
+**约束规则**：
+
+1. **禁止 prop drilling** — 若一个 prop 需要穿越 ≥2 层组件传递，必须提升为 atom 或 store
+2. **禁止在组件内定义 atom** — 所有 atom 定义在 `atoms/` 目录下的模块文件中
+3. **禁止混用** — 服务端/异步数据用 Jotai atom，纯 UI 状态用 Zustand store，不要反过来
+4. **组件接口极简** — 组件 props 仅接收该组件独有的「身份标识」（如 `entryId`），其余状态从 atom/store 读取
+5. **Zustand 使用 selector** — 始终用 `useStore(s => s.field)` 而非 `useStore()` 解构，避免无关更新触发 re-render
+
+**文件组织**：
+
+```
+packages/ui/src/
+├── atoms/              # Jotai atoms（按领域分文件）
+│   ├── search.ts       # searchQueryAtom, searchResultsAtom, ...
+│   ├── feeds.ts        # feedsAtom, categoryAtom, ...
+│   └── auth.ts         # currentUserAtom, ...
+├── stores/             # Zustand stores（按领域分文件）
+│   └── ui.ts           # sidebar, modal, scroll 等 UI 状态
+├── components/         # 纯展示组件 + atom/store 消费
+├── pages/              # 路由页面
+└── ...
+```
+
+---
+
+## 12. 开发约定
 
 ### 命名
 - 包名：`@dak/<name>`（npm scope）
@@ -416,7 +633,7 @@ skills/                     dak, dak_summary, dak_v2
 
 ---
 
-## 12. 本地开发
+## 13. 本地开发
 
 ### 启动
 
@@ -479,7 +696,7 @@ DAK_SERVER_URL=http://localhost:3000 DAK_API_KEY=dak_xxx \
 
 ---
 
-## 13. 演进路线
+## 14. 演进路线
 
 | 阶段 | 内容 |
 |---|---|

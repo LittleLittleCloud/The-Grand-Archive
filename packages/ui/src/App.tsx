@@ -87,48 +87,70 @@ function SearchPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <form onSubmit={handleSearch} className="flex gap-2 mb-8">
+    <div className="min-h-screen bg-surface pt-14">
+      <main className="max-w-4xl mx-auto px-6 py-10">
+        <form onSubmit={handleSearch} className="flex gap-3 mb-10">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search entries..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-0 py-2 bg-transparent text-on-surface placeholder-on-surface-variant/50 focus:outline-none"
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "1rem",
+              borderBottom: "1px solid rgba(115,119,124,0.3)",
+            }}
+            onFocus={(e) => (e.target.style.borderBottom = "2px solid #041926")}
+            onBlur={(e) => (e.target.style.borderBottom = "1px solid rgba(115,119,124,0.3)")}
           />
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="px-6 py-2 bg-primary text-on-primary font-medium hover:opacity-90 disabled:opacity-50 transition-opacity cursor-pointer"
+            style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.85rem" }}
           >
             {loading ? "..." : "Search"}
           </button>
         </form>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg">
+          <div className="mb-6 p-4 bg-surface-low text-on-surface">
             {error}
           </div>
         )}
 
         {results && (
           <div>
-            <p className="text-sm text-gray-500 mb-4">
-              {results.total} results for &ldquo;{results.query}&rdquo;
+            <p
+              className="text-on-surface-variant mb-6"
+              style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.05em" }}
+            >
+              {results.total} RESULTS FOR &ldquo;{results.query}&rdquo;
             </p>
-            <ul className="space-y-3">
-              {results.results.map((r) => (
+            <ul className="space-y-0">
+              {results.results.map((r, i) => (
                 <li
                   key={r.id}
-                  className="p-4 bg-white rounded-lg border hover:shadow-sm"
+                  className="py-5 px-6 transition-colors hover:bg-surface-low"
+                  style={{
+                    background: i % 2 === 0 ? "var(--color-surface)" : "var(--color-surface-container-low)",
+                  }}
                 >
-                  <h3 className="font-medium text-gray-900">{r.title}</h3>
-                  <div className="mt-1 text-sm text-gray-500 flex gap-3">
+                  <h3
+                    className="text-on-surface"
+                    style={{ fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 500 }}
+                  >
+                    {r.title}
+                  </h3>
+                  <div
+                    className="mt-2 flex flex-wrap gap-4 text-on-surface-variant"
+                    style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.05em" }}
+                  >
                     <span>{r.category}</span>
                     <span>{r.source}</span>
                     <span>{r.published.slice(0, 10)}</span>
-                    <span className="text-gray-400">
+                    <span style={{ color: "var(--color-outline)" }}>
                       score: {r.score.toFixed(1)}
                     </span>
                   </div>

@@ -1,8 +1,0 @@
-{
-  "userIgnoreFilters": [
-    "node_modules/",
-    "src/",
-    "templates/",
-    "web/"
-  ]
-}

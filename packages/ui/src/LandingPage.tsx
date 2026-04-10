@@ -2,136 +2,570 @@ import { useEffect, useState } from "react";
 import { api } from "./api";
 import type { StatsResponse } from "@dak/contract";
 
+/* ─── Data ─── */
+
+const SOURCES: Record<string, string[]> = {
+  "Finance / Macro": [
+    "Bloomberg", "CNBC", "MarketWatch", "华尔街见闻", "第一财经",
+    "财新网", "ZeroHedge", "金十数据", "雪球",
+  ],
+  "International / Geopolitics": [
+    "BBC Chinese", "NYT Chinese", "Al Jazeera", "AP News",
+    "Foreign Affairs", "The Diplomat", "参考消息", "人民网",
+  ],
+  Tech: ["Hacker News"],
+  "Social Trending": ["Weibo Hot", "Zhihu Hot"],
+};
+
+const FEATURES = [
+  { title: "AI-Native", desc: "Claude Skills built in. Your agent searches, filters, and summarizes without extra setup." },
+  { title: "Full-Text Search", desc: "Fuzzy + prefix matching across every entry. Multi-dimensional filters by category, source, and date." },
+  { title: "21 Live Sources", desc: "Finance, geopolitics, tech, and social trending — updated every 30 minutes." },
+  { title: "TypeScript SDK", desc: "Typed HTTP client. Supports ESM and CJS. One npm install away." },
+  { title: "CLI Tool", desc: "dak search \"tariff\" — one-liner searches and feed browsing from your terminal." },
+  { title: "Tiered Access", desc: "Anonymous (28 days), Free (90 days), Premium (unlimited history and higher rate limits)." },
+];
+
+const CODE_TABS = [
+  {
+    label: "Skill",
+    code: `$ npx skills add LittleLittleCloud/The-Grand-Archive
+
+✓ Added skill: dak (Search & Browse)
+✓ Added skill: dak_summary (Structured Analysis)
+
+You: Search recent finance news about oil prices
+
+Agent: Found 23 results across Bloomberg, CNBC,
+       and MarketWatch.
+
+Key findings:
+• Oil prices surged 12% following Iran conflict
+• Central banks face fresh inflation pressure
+• UAE considers freezing Iranian assets (WSJ)`,
+  },
+  {
+    label: "SDK",
+    code: `import { DakClient } from "@littlelittlecloud/dak";
+
+const client = new DakClient({
+  baseUrl: "https://dak-server.fly.dev",
+});
+
+const result = await client.search({
+  q: "tariff",
+  category: "finance",
+  limit: 10,
+});
+
+console.log(result.results[0].title);`,
+  },
+  {
+    label: "CLI",
+    code: `$ npm install -g @littlelittlecloud/dak-cli
+
+$ dak search "inflation" --category finance
+
+  1. Core wholesale prices rose 0.8% in January
+     Bloomberg · finance · 2026-02-27 · score: 8.4
+
+  2. As Trump declares inflation tamed, Iran conflict
+     threatens new price pressures
+     CNBC · finance · 2026-03-02 · score: 7.9
+
+  3. Middle East conflict poses fresh test to central
+     banks as oil shock fuels inflation
+     AP News · finance · 2026-03-04 · score: 7.6`,
+  },
+];
+
+const STEPS = [
+  { num: "01", title: "Install", desc: "npm install @littlelittlecloud/dak — or add the Claude Skill to your AI agent." },
+  { num: "02", title: "Query", desc: "Search with the SDK, CLI, or natural language through your AI agent." },
+  { num: "03", title: "Analyze", desc: "Get structured results with metadata — source, date, category, relevance score." },
+];
+
+/* ─── Component ─── */
+
 export function LandingPage() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
-    api.getStats().then(setStats).catch((e) => setError((e as Error).message));
+    api.getStats().then(setStats).catch(() => {});
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
-        <div className="max-w-5xl mx-auto px-6 py-20 text-center">
-          <h1 className="text-5xl font-extrabold tracking-tight">大案牍库</h1>
-          <div className="mt-8 flex justify-center gap-4">
-            <a
-              href="#/search"
-              className="px-6 py-3 bg-white text-indigo-700 font-semibold rounded-lg shadow hover:bg-indigo-50 transition"
+    <div className="bg-surface">
+      {/* ═══ 1. Hero ═══ */}
+      <section
+        style={{ background: "linear-gradient(135deg, #041926 0%, #1a2e3b 100%)" }}
+      >
+        <div className="pt-28 pb-16 px-6">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-9 gap-12 items-start">
+            {/* Left — headline */}
+            <div className="lg:col-span-4">
+              <h1
+                className="text-on-primary font-extrabold leading-tight"
+                style={{ fontFamily: "var(--font-display)", fontSize: "3.5rem" }}
+              >
+                A Living Archive
+                <br />
+                of the World's News
+              </h1>
+              <p
+                className="mt-4 text-on-primary/70 max-w-xl leading-relaxed"
+                style={{ fontFamily: "var(--font-body)", fontSize: "1.05rem" }}
+              >
+                14,000+ entries from 21 sources. Updated every 30 minutes.
+                Built for AI agents and developers.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-4">
+                <a
+                  href="https://discord.gg/TODO"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-6 py-3 text-on-primary font-semibold transition-colors"
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    background: "#5865F2",
+                  }}
+                >
+                  Join Discord
+                </a>
+                <a
+                  href="https://github.com/littlelittlecloud/The-Grand-Archive"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-6 py-3 text-on-primary/80 hover:text-on-primary transition-colors"
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    textDecoration: "underline",
+                    textUnderlineOffset: "4px",
+                  }}
+                >
+                  View on GitHub
+                </a>
+              </div>
+            </div>
+
+            {/* Right — code specimen */}
+            <div className="lg:col-span-4 hidden lg:block">
+              <div
+                className="overflow-hidden"
+                style={{ background: "#f7f4ed", fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace", fontSize: "0.85rem", borderRadius: "12px", boxShadow: "0px 12px 32px rgba(28,28,24,0.12)" }}
+              >
+                {/* Title bar */}
+                <div className="flex items-center gap-2.5 px-5 py-3" style={{ background: "#ece8df" }}>
+                  <span className="w-3.5 h-3.5 inline-block" style={{ background: "#ff5f57", borderRadius: "50%" }} />
+                  <span className="w-3.5 h-3.5 inline-block" style={{ background: "#febc2e", borderRadius: "50%" }} />
+                  <span className="w-3.5 h-3.5 inline-block" style={{ background: "#28c840", borderRadius: "50%" }} />
+                  <span className="ml-2 text-xs" style={{ color: "#8a8478", fontFamily: "var(--font-label)" }}>bash</span>
+                </div>
+                {/* Terminal body */}
+                <div className="px-5 py-5 overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+                  <pre className="whitespace-pre leading-relaxed" style={{ color: "#3b3630" }}>
+<span style={{ color: "#6a7d45" }}>$</span>{` npx skills add LittleLittleCloud/The-Grand-Archive`}
+{`\n`}
+<span style={{ color: "#2e7d6a" }}>✓</span>{` Added skill: dak (Search & Browse)`}
+<span style={{ color: "#2e7d6a" }}>{`\n✓`}</span>{` Added skill: dak_summary (Structured Analysis)`}
+<span style={{ color: "#2e7d6a" }}>{`\n✓`}</span>{` Installed: @littlelittlecloud/dak-cli`}
+{`\n`}
+{`Done. Tell your agent:`}
+<span style={{ color: "#96622d" }}>{`\n"Search recent news about tariffs"`}</span>
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Source Ticker — bottom strip of hero */}
+        <div
+          className="overflow-hidden py-3"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <div className="flex items-center">
+            <span
+              className="shrink-0 z-10 pl-6 pr-4 uppercase text-gold"
+              style={{
+                fontFamily: "var(--font-label)",
+                fontSize: "0.65rem",
+                letterSpacing: "0.1em",
+                background: "var(--color-primary)",
+              }}
             >
-              Search Feeds
-            </a>
-            <a
-              href="https://github.com/littlelittlecloud/The-Grand-Archive"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 border border-white/40 text-white font-semibold rounded-lg hover:bg-white/10 transition"
-            >
-              GitHub
-            </a>
+              Tracking
+            </span>
+            <div className="ticker-track">
+              {[0, 1].map((copy) => (
+                <div key={copy} className="ticker-scroll flex gap-5" aria-hidden={copy === 1}>
+                  {Object.entries(SOURCES).flatMap(([category, sources]) =>
+                    sources.map((s) => (
+                      <span
+                        key={`${copy}-${s}`}
+                        className="shrink-0 px-3 py-1 whitespace-nowrap text-on-primary/80"
+                        style={{
+                          fontFamily: "var(--font-label)",
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                          letterSpacing: "0.05em",
+                        }}
+                        title={category}
+                      >
+                        {s}
+                      </span>
+                    ))
+                  )}
+                  <span className="shrink-0 px-2 text-on-primary/15">·</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Dashboard */}
-      <section className="max-w-5xl mx-auto px-6 pb-20">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          Archive Stats
+      {/* ═══ 2. Live Stats Strip ═══ */}
+      {stats && (
+        <section className="bg-surface">
+          <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <StatFigure value={stats.total.toLocaleString()} label="Total Entries" />
+            <StatFigure value={String(stats.byCategory.length)} label="Categories" />
+            <StatFigure value={String(stats.bySource.length)} label="Sources" />
+            {stats.lastUpdated && (
+              <StatFigure
+                value={new Date(stats.lastUpdated).toLocaleDateString()}
+                label="Last Updated"
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ═══ 4. Features ═══ */}
+      <section className="bg-surface-low">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h2
+            className="text-on-surface mb-12"
+            style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
+          >
+            Capabilities
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+            {FEATURES.map((f) => (
+              <div key={f.title}>
+                <h3
+                  className="text-on-surface mb-2"
+                  style={{ fontFamily: "var(--font-body)", fontSize: "1.125rem", fontWeight: 600 }}
+                >
+                  {f.title}
+                </h3>
+                <p
+                  className="text-on-surface-variant leading-relaxed"
+                  style={{ fontFamily: "var(--font-body)", fontSize: "1rem" }}
+                >
+                  {f.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 5. Code Specimens ═══ */}
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <h2
+          className="text-on-surface mb-8"
+          style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
+        >
+          Integration
         </h2>
 
-        {error && (
-          <div className="p-4 bg-red-50 text-red-700 rounded-lg mb-6">
-            Could not load stats: {error}
-          </div>
-        )}
+        {/* Tabs — archive tags */}
+        <div className="flex gap-0 mb-0">
+          {CODE_TABS.map((tab, i) => (
+            <button
+              key={tab.label}
+              onClick={() => setActiveTab(i)}
+              className="px-5 py-2 text-sm transition-colors cursor-pointer"
+              style={{
+                fontFamily: "var(--font-label)",
+                letterSpacing: "0.05em",
+                background: activeTab === i ? "var(--color-tertiary-container)" : "var(--color-surface-container-low)",
+                color: activeTab === i ? "var(--color-tertiary-fixed)" : "var(--color-on-surface-variant)",
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        {!stats && !error && (
-          <p className="text-gray-400">Loading stats…</p>
-        )}
-
-        {stats && (
-          <>
-            {/* Summary cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <StatCard label="Total Entries" value={stats.total} />
-              <StatCard
-                label="Categories"
-                value={stats.byCategory.length}
-              />
-              <StatCard label="Sources" value={stats.bySource.length} />
-              {stats.lastUpdated && (
-                <StatCard
-                  label="Last Updated"
-                  text={new Date(stats.lastUpdated).toLocaleString()}
-                />
-              )}
-            </div>
-
-            {/* Bar charts */}
-            <div className="grid md:grid-cols-2 gap-8">
-              <BarChart
-                title="Entries by Category"
-                data={stats.byCategory.map((c) => ({
-                  label: c.category,
-                  value: c.count,
-                }))}
-              />
-              <BarChart
-                title="Top Sources"
-                data={stats.bySource
-                  .sort((a, b) => b.count - a.count)
-                  .slice(0, 10)
-                  .map((s) => ({ label: s.source, value: s.count }))}
-              />
-            </div>
-          </>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function StatCard({ label, value, text }: { label: string; value?: number; text?: string }) {
-  return (
-    <div className="bg-white rounded-xl border p-6 shadow-sm text-center">
-      <p className="text-3xl font-extrabold text-indigo-600">
-        {text ?? value?.toLocaleString()}
-      </p>
-      <p className="mt-1 text-sm text-gray-500">{label}</p>
-    </div>
-  );
-}
-
-function BarChart({
-  title,
-  data,
-}: {
-  title: string;
-  data: { label: string; value: number }[];
-}) {
-  const max = Math.max(...data.map((d) => d.value), 1);
-
-  return (
-    <div className="bg-white rounded-xl border p-6 shadow-sm">
-      <h3 className="font-semibold text-gray-900 mb-4">{title}</h3>
-      <ul className="space-y-2">
-        {data.map((d) => (
-          <li key={d.label} className="flex items-center gap-3 text-sm">
-            <span className="w-28 truncate text-gray-600 text-right">
-              {d.label}
+        {/* Code block — terminal style */}
+        <div
+          className="overflow-hidden"
+          style={{ background: "#f7f4ed", borderRadius: "12px", boxShadow: "0px 12px 32px rgba(28,28,24,0.12)" }}
+        >
+          {/* Title bar */}
+          <div className="flex items-center gap-2.5 px-5 py-3" style={{ background: "#ece8df" }}>
+            <span className="w-3.5 h-3.5 inline-block" style={{ background: "#ff5f57", borderRadius: "50%" }} />
+            <span className="w-3.5 h-3.5 inline-block" style={{ background: "#febc2e", borderRadius: "50%" }} />
+            <span className="w-3.5 h-3.5 inline-block" style={{ background: "#28c840", borderRadius: "50%" }} />
+            <span className="ml-2 text-xs" style={{ color: "#8a8478", fontFamily: "var(--font-label)" }}>
+              {CODE_TABS[activeTab].label}
             </span>
-            <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
-              <div
-                className="h-full bg-indigo-500 rounded-full transition-all"
-                style={{ width: `${(d.value / max) * 100}%` }}
-              />
+          </div>
+          {/* Terminal body */}
+          <div className="px-5 py-5 overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+            <pre
+              className="whitespace-pre leading-relaxed"
+              style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace", fontSize: "0.85rem", color: "#3b3630" }}
+            >
+              {CODE_TABS[activeTab].code}
+            </pre>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 6. How It Works ═══ */}
+      <section className="bg-surface-low">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h2
+            className="text-on-surface mb-12"
+            style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
+          >
+            Three Steps
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {STEPS.map((s) => (
+              <div key={s.num}>
+                <span
+                  className="block mb-3"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "3rem",
+                    fontWeight: 800,
+                    color: "var(--color-tertiary-fixed-dim)",
+                  }}
+                >
+                  {s.num}
+                </span>
+                <h3
+                  className="text-on-surface mb-2"
+                  style={{ fontFamily: "var(--font-body)", fontSize: "1.125rem", fontWeight: 600 }}
+                >
+                  {s.title}
+                </h3>
+                <p
+                  className="text-on-surface-variant leading-relaxed"
+                  style={{ fontFamily: "var(--font-body)", fontSize: "1rem" }}
+                >
+                  {s.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 7. Access Tiers ═══ */}
+      <section className="bg-surface">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h2
+            className="text-on-surface mb-12"
+            style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
+          >
+            Access Tiers
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Anonymous */}
+            <div className="p-8 transition-colors hover:bg-surface-low" style={{ background: "var(--color-surface-container-low)" }}>
+              <span
+                className="uppercase text-on-surface-variant"
+                style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.08em" }}
+              >
+                Anonymous
+              </span>
+              <p
+                className="mt-4 text-on-surface"
+                style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800 }}
+              >
+                28 days
+              </p>
+              <p
+                className="mt-1 text-on-surface-variant"
+                style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.03em" }}
+              >
+                of search history
+              </p>
+              <ul className="mt-6 space-y-2" style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem" }}>
+                <li className="text-on-surface-variant">Full-text search</li>
+                <li className="text-on-surface-variant">All categories &amp; sources</li>
+                <li className="text-on-surface-variant">10 requests / min</li>
+              </ul>
+              <div className="mt-8">
+                <span
+                  className="text-on-surface-variant"
+                  style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.05em" }}
+                >
+                  No sign-up required
+                </span>
+              </div>
             </div>
-            <span className="w-10 text-gray-500 text-right">{d.value}</span>
-          </li>
-        ))}
-      </ul>
+
+            {/* Free */}
+            <div
+              className="p-8 relative"
+              style={{ background: "var(--color-primary)" }}
+            >
+              <span
+                className="uppercase"
+                style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.08em", color: "var(--color-tertiary-fixed-dim)" }}
+              >
+                Free
+              </span>
+              <p
+                className="mt-4 text-on-primary"
+                style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800 }}
+              >
+                90 days
+              </p>
+              <p
+                className="mt-1 text-on-primary/60"
+                style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.03em" }}
+              >
+                of search history
+              </p>
+              <ul className="mt-6 space-y-2" style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem" }}>
+                <li className="text-on-primary/80">Full-text search</li>
+                <li className="text-on-primary/80">All categories &amp; sources</li>
+                <li className="text-on-primary/80">API key access</li>
+                <li className="text-on-primary/80">60 requests / min</li>
+              </ul>
+              <div className="mt-8">
+                <a
+                  href="#/login"
+                  className="inline-block px-5 py-2.5 bg-on-primary text-primary font-medium hover:bg-on-primary/90 transition-colors"
+                  style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.05em" }}
+                >
+                  Sign in to get started
+                </a>
+              </div>
+            </div>
+
+            {/* Premium */}
+            <div className="p-8 transition-colors hover:bg-surface-low" style={{ background: "var(--color-surface-container-low)" }}>
+              <span
+                className="uppercase text-on-surface-variant"
+                style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.08em" }}
+              >
+                Premium
+              </span>
+              <p
+                className="mt-4 text-on-surface"
+                style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800 }}
+              >
+                Unlimited
+              </p>
+              <p
+                className="mt-1 text-on-surface-variant"
+                style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.03em" }}
+              >
+                full archive access
+              </p>
+              <ul className="mt-6 space-y-2" style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem" }}>
+                <li className="text-on-surface-variant">Everything in Free</li>
+                <li className="text-on-surface-variant">Unlimited history</li>
+                <li className="text-on-surface-variant">120 requests / min</li>
+                <li className="text-on-surface-variant">Dedicated support</li>
+              </ul>
+              <div className="mt-8">
+                <a
+                  href="mailto:littlelittlecloud@gmail.com"
+                  className="inline-block text-secondary hover:text-on-surface transition-colors"
+                  style={{
+                    fontFamily: "var(--font-label)",
+                    fontSize: "0.8rem",
+                    letterSpacing: "0.05em",
+                    textDecoration: "underline",
+                    textUnderlineOffset: "3px",
+                  }}
+                >
+                  Contact us
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ 8. Footer ═══ */}
+      <footer className="bg-surface-low">
+        <div
+          className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6"
+        >
+          <div>
+            <span
+              className="text-on-surface font-bold"
+              style={{ fontFamily: "var(--font-display)", fontSize: "1.125rem" }}
+            >
+              THE GRANT ARCHIVE
+            </span>
+            <p
+              className="mt-1 text-on-surface-variant"
+              style={{ fontFamily: "var(--font-label)", fontSize: "0.75rem", letterSpacing: "0.05em" }}
+            >
+              THE GRAND ARCHIVE
+            </p>
+          </div>
+          <div className="flex gap-6">
+            <FooterLink href="https://github.com/littlelittlecloud/The-Grand-Archive">GitHub</FooterLink>
+            <FooterLink href="https://discord.gg/TODO">Discord</FooterLink>
+            <FooterLink href="https://www.npmjs.com/package/@littlelittlecloud/dak">npm SDK</FooterLink>
+            <FooterLink href="https://www.npmjs.com/package/@littlelittlecloud/dak-cli">npm CLI</FooterLink>
+          </div>
+        </div>
+      </footer>
     </div>
+  );
+}
+
+/* ─── Sub-components ─── */
+
+function StatFigure({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="text-center">
+      <span
+        className="block text-on-surface"
+        style={{ fontFamily: "var(--font-display)", fontSize: "2.25rem", fontWeight: 800 }}
+      >
+        {value}
+      </span>
+      <span
+        className="block mt-1 text-on-surface-variant uppercase"
+        style={{ fontFamily: "var(--font-label)", fontSize: "0.85rem", fontWeight: 600, letterSpacing: "0.05em" }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-secondary hover:text-on-surface transition-colors"
+      style={{
+        fontFamily: "var(--font-label)",
+        fontSize: "0.75rem",
+        letterSpacing: "0.05em",
+        textDecoration: "underline",
+        textUnderlineOffset: "3px",
+      }}
+    >
+      {children}
+    </a>
   );
 }

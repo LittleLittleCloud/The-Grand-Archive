@@ -1,1 +1,102 @@
 @import "tailwindcss";
+
+/* ─── Design System: The Digital Curator ─── */
+
+:root {
+  /* Primary – deep navy */
+  --color-primary: #041926;
+  --color-primary-container: #1a2e3b;
+  --color-on-primary: #ffffff;
+
+  /* Surface – parchment tiers */
+  --color-surface: #fcf9f2;
+  --color-surface-container-lowest: #fefcf7;
+  --color-surface-container-low: #f4f1ea;
+  --color-surface-container: #eae7e0;
+  --color-surface-container-high: #e0ddd6;
+  --color-surface-container-highest: #d6d3cc;
+  --color-surface-dim: #ddd9d2;
+
+  /* Text on surfaces */
+  --color-on-surface: #1c1c18;
+  --color-on-surface-variant: #44474e;
+
+  /* Secondary – muted blue-grey */
+  --color-secondary: #4e6073;
+
+  /* Tertiary – gold / archive tag */
+  --color-tertiary: #211500;
+  --color-tertiary-container: #3b2900;
+  --color-tertiary-fixed: #ffdea5;
+  --color-tertiary-fixed-dim: #e9c176;
+
+  /* Outline */
+  --color-outline: #73777c;
+  --color-outline-variant: #c3c7cc;
+
+  /* Shadow */
+  --shadow-whisper: 0px 12px 32px rgba(28, 28, 24, 0.06);
+
+  /* Typography */
+  --font-display: "Newsreader", "Georgia", serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-label: "Work Sans", system-ui, sans-serif;
+}
+
+/* ─── Base resets ─── */
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Tailwind v4 custom utilities via @theme ─── */
+
+@theme {
+  --color-primary: #041926;
+  --color-primary-container: #1a2e3b;
+  --color-on-primary: #ffffff;
+
+  --color-surface: #fcf9f2;
+  --color-surface-low: #f4f1ea;
+  --color-surface-dim: #ddd9d2;
+  --color-surface-high: #e0ddd6;
+
+  --color-on-surface: #1c1c18;
+  --color-on-surface-variant: #44474e;
+
+  --color-secondary: #4e6073;
+
+  --color-tertiary-container: #3b2900;
+  --color-tertiary-fixed: #ffdea5;
+  --color-gold: #e9c176;
+
+  --color-outline: #73777c;
+
+  --font-family-display: "Newsreader", "Georgia", serif;
+  --font-family-body: "Inter", system-ui, sans-serif;
+  --font-family-label: "Work Sans", system-ui, sans-serif;
+}
+
+/* ─── Ticker marquee animation ─── */
+
+.ticker-track {
+  display: flex;
+  overflow: hidden;
+  flex: 1;
+  mask-image: linear-gradient(to right, transparent, black 40px, black calc(100% - 40px), transparent);
+}
+
+.ticker-scroll {
+  display: flex;
+  flex-shrink: 0;
+  animation: ticker-slide 30s linear infinite;
+}
+
+@keyframes ticker-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
