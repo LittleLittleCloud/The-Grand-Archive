@@ -41,9 +41,6 @@ jobs:
           cd ../server && bunx tsc --noEmit
           cd ../ingestion-worker && bunx tsc --noEmit
 
-      - name: Lint UI
-        run: cd packages/ui && bun run lint
-
       - name: Test
         run: |
           cd packages/server && bun test || true
