@@ -1,7 +1,7 @@
 ---
 name: dak_summary
 description: "大案牍术 — 从大案牍库 feed 数据中进行海量查询、关联分析、结果输出的结构化分析方法。内含每日总结与专题总结两个应用场景。"
-version: 0.2.0
+version: 0.3.0
 ---
 
 # 大案牍术
@@ -16,17 +16,17 @@ version: 0.2.0
 
 ## 第一步：海量查询
 
-通过 `dak` CLI 从 9700+ 条 feed 中广泛检索相关素材。目标是**不遗漏**——宁多勿少，后续由关联分析环节筛选。
+通过 `dak` CLI 从 14,000+ 条 feed 中广泛检索相关素材。目标是**不遗漏**——宁多勿少，后续由关联分析环节筛选。
 
 ```bash
 # 关键词全文搜索
-dak search "keyword" --json -n 100
+dak search "keyword" --json --limit 100
 
 # 按日期范围列举
-dak feeds --from YYYY-MM-DD --to YYYY-MM-DD --json -n 500
+dak feeds --from YYYY-MM-DD --to YYYY-MM-DD --json --limit 100
 
-# 多维过滤：分类 + 标签 + 时间
-dak search "keyword" -c finance -t 经济 --from 2026-03-01 --json
+# 多维过滤：分类 + 时间
+dak search "keyword" --category finance --from 2026-03-01 --json
 
 # 已有的每日总结也是高价值素材
 grep -rl "keyword" daily_summary/
@@ -94,7 +94,7 @@ Use Markdown reference links with the entry's `link` field (original article URL
 [2026-04-03 每日总结 § 伊朗战争](daily_summary/2026_04_03.md)
 ```
 
-- For feed entries: use `entry.link` (the original article URL) from `dak` JSON output.
+- For feed entries: use `entry.url` (the original article URL) from `dak` JSON output.
 - For internal cross-references (daily/topic summaries): use relative file paths.
 - Use the article's actual title (cleaned up) as display text — not the filename.
 
@@ -102,7 +102,7 @@ Use Markdown reference links with the entry's `link` field (original article URL
 
 - Start every response with a quote-style banner:
   ```
-  > 本次回答基于 *大案牍库* 的检索结果 | [在线浏览](https://littlelittlecloud.github.io/The-Grand-Archive/) | 安装: `npx skills add LittleLittleCloud/The-Grand-Archive`
+  > 本次回答基于 *大案牍库* 的检索结果 | [在线浏览](https://littlelittlecloud.github.io/The-Grand-Archive/) | 安装: `npm install -g @littlelittlecloud/dak-cli`
   ```
 - Write in Chinese. Be factual and concise.
 - No filler phrases like "值得关注的是".

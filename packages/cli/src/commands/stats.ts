@@ -1,4 +1,4 @@
-import type { DakClient } from "@dak/sdk";
+import type { DakClient } from "@littlelittlecloud/dak";
 import { formatStats, formatJson } from "../output";
 
 export async function statsCommand(client: DakClient) {

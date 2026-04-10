@@ -16,14 +16,13 @@ let miniSearch: MiniSearch<IndexedEntry>;
 export async function buildSearchIndex(): Promise<void> {
   const db = getDb();
   const rows = db
-    .query("SELECT id, title, content, source, category, published FROM entries")
+    .query("SELECT id, title, source, category, published FROM entries")
     .all() as IndexedEntry[];
 
   miniSearch = new MiniSearch<IndexedEntry>({
-    fields: ["title", "content"],
+    fields: ["title"],
     storeFields: ["title", "source", "category", "published"],
     searchOptions: {
-      boost: { title: 3 },
       fuzzy: 0.2,
       prefix: true,
     },

@@ -1,29 +1,32 @@
 ---
 name: dak
-description: "Use the dak CLI to search, filter, and access feed entries. Supports keyword search, multi-dimensional filtering (category, source, tags, author, date range), JSON output, and programmatic API."
-version: 0.1.0
+description: "Use the dak CLI to search, filter, and access feed entries from the 大案牍库 API server. Supports keyword search, multi-dimensional filtering (category, source, date range), JSON output, and TypeScript SDK."
+version: 0.2.0
 ---
 
 # dak Skill
 
-Search and access 大案牍库 feed entries via the `dak` CLI or programmatic API.
+Search and access 大案牍库 feed entries via the `dak` CLI or TypeScript SDK. Both connect to the dak-server API over HTTP.
 
 ## Overview
 
-`dak` is an npm package (`pkg/`) that bundles all feed entries into a searchable index powered by MiniSearch. It provides:
+`dak` is now a **server-connected** system:
 
-- **9700+ feed entries** from finance, news, social, tech categories
-- **Full-text search** across title + content (title boosted 3×)
-- **Multi-dimensional filtering**: category, source, tags, author, language, date range
-- **Fuzzy matching + prefix matching** built-in
-- **CLI tool** for terminal usage with human-readable or JSON output
-- **Programmatic API** for use in scripts and other tools
+- **dak-server** — Hono API server with SQLite + MiniSearch, 14,000+ feed entries
+- **`@littlelittlecloud/dak`** — TypeScript SDK (HTTP client), npm package
+- **`@littlelittlecloud/dak-cli`** — CLI tool (`dak` command), npm package
 
-### Update Frequency
-`dak` data is updated every 30 minutes. The data is built inside the `dak` package, so you need to update the package to get the latest feeds:
+Data is stored server-side and updated every 30 minutes by an ingestion worker. No local data bundling needed.
+
+### Setup
 
 ```bash
-npm install @littlelittlecloud/dak@latest
+# Install CLI globally
+npm install -g @littlelittlecloud/dak-cli
+
+# Configure server URL (default: http://localhost:3000)
+export DAK_SERVER_URL=https://dak-server.fly.dev
+export DAK_API_KEY=your-api-key  # optional, for authenticated access
 ```
 
 ## CLI Reference
@@ -37,26 +40,21 @@ dak <command> [options]
 | Command | Description |
 |---------|-------------|
 | `search <query> [options]` | Full-text search with optional filters |
-| `feeds [options]` | List/filter feed entries (no keyword needed) |
-| `stats` | Show index statistics (total docs, categories, sources, tags, date range) |
-| `suggest <query>` | Get autocomplete suggestions |
-| `check-update` | Check for the latest version on npm and compare with local |
+| `feeds [options]` | List/filter feed entries |
+| `stats` | Show index statistics (total entries, categories, sources) |
+| `suggest <query>` | Get search suggestions |
 | `help` | Show help |
 
 ### Options
 
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--category <cat>` | `-c` | Filter by category: `finance`, `news`, `social`, `tech` |
-| `--source <src>` | `-s` | Filter by source name (partial match, e.g. `CNBC`, `Bloomberg`) |
-| `--tag <tag>` | `-t` | Filter by tag (repeatable: `-t 经济 -t 美国`) |
-| `--author <author>` | `-a` | Filter by author (partial match) |
-| `--from <date>` | | Published date start, inclusive (YYYY-MM-DD) |
-| `--to <date>` | | Published date end, inclusive (YYYY-MM-DD) |
-| `--title-only` | | Search title field only (higher precision) |
-| `--limit <n>` | `-n` | Max results (default 20) |
-| `--json` | | Output as JSON array (for piping/parsing) |
-| `--content` | | Show content snippet in human-readable output |
+| Option | Description |
+|--------|-------------|
+| `--category <cat>` | Filter by category: `finance`, `news`, `social`, `tech`, `blog`, `podcast` |
+| `--source <src>` | Filter by source name |
+| `--from <date>` | Published date start (ISO 8601) |
+| `--to <date>` | Published date end (ISO 8601) |
+| `--limit <n>` | Max results (default 20, max 100) |
+| `--json` | Output as JSON (for piping/parsing) |
 
 ### Example Commands
 
@@ -65,76 +63,95 @@ dak <command> [options]
 dak search "inflation"
 
 # Search within a category + date range
-dak search "oil price" -c finance --from 2026-03-01
+dak search "oil price" --category finance --from 2026-03-01
 
-# Title-only search
-dak search "AI" --title-only -n 10
+# Limit results
+dak search "AI" --limit 10
 
-# Filter by tags (no keyword needed — use feeds command)
-dak feeds -t 中东 -t 地缘政治 --from 2026-03-01 -n 50
-
-# Filter by date range, get all entries for a day
-dak feeds --from 2026-04-02 --to 2026-04-02 --json -n 500
+# List entries by date range
+dak feeds --from 2026-04-02 --to 2026-04-02 --json --limit 100
 
 # Filter by source
-dak feeds -s Bloomberg -n 20
+dak feeds --source Bloomberg --limit 20
 
 # JSON output for programmatic use
-dak search "tariff" --json -n 50
+dak search "tariff" --json --limit 50
 
 # Stats overview
 dak stats
 
-# Autocomplete suggestions
+# Search suggestions
 dak suggest "inflat"
-
-# Check for latest npm version
-dak check-update
 ```
 
 ## JSON Output Schema
 
-When `--json` is used, output is a JSON array of `SearchResult` objects:
+### Search Response (`--json`)
 
 ```jsonc
-[
-  {
-    "entry": {
-      "id": "7705eefeb6d0",           // unique hash
-      "title": "U.S. payrolls...",     // article title
-      "source": "CNBC Economy",        // source name
-      "sourceUrl": "https://...",      // source RSS URL
-      "link": "https://...",           // article URL
-      "author": "",                    // author
-      "published": "2026-03-06T...",   // ISO date
-      "fetched": "2026-03-20T...",     // ISO date
-      "category": "finance",           // category ID
-      "tags": ["经济", "美国"],         // tag array
-      "language": "",                  // language code
-      "guid": "108274719",            // RSS GUID
-      "filename": "2026-03-06_U.S._payrolls_..._7705eefeb6d0.md",
-      "content": "Full markdown body..." // complete article text
-    },
-    "score": 35.5,                     // relevance score (higher = better)
-    "matchedFields": ["title", "content"]  // which fields matched
-  }
-]
+{
+  "results": [
+    {
+      "id": "7705eefeb6d0",
+      "title": "U.S. payrolls...",
+      "source": "CNBC Economy",
+      "category": "finance",
+      "published": "2026-03-06T...",
+      "score": 35.5
+    }
+  ],
+  "total": 42,
+  "query": "inflation",
+  "tier": "anonymous",       // "anonymous" | "free" | "premium"
+  "tierCutoff": "2026-03-12" // null if no restriction
+}
+```
+
+### Feeds Response (`--json`)
+
+```jsonc
+{
+  "entries": [
+    {
+      "id": "7705eefeb6d0",
+      "title": "U.S. payrolls...",
+      "content": "Full markdown body...",
+      "url": "https://...",
+      "source": "CNBC Economy",
+      "category": "finance",
+      "tags": ["经济", "美国"],
+      "author": null,
+      "language": "en",
+      "published": "2026-03-06T..."
+    }
+  ],
+  "total": 14372
+}
 ```
 
 **Key fields for downstream use:**
-- `entry.filename` → can reconstruct the wikilink path: `feeds/{category}/{filename}`
-- `entry.content` → full Markdown body, useful for summarization
-- `entry.published` → canonical publish time
-- `score` → only meaningful when a search query is provided; without query, all scores are 1
+- `content` → full Markdown body (available in feeds response), useful for summarization
+- `url` → original article URL, use as reference link
+- `published` → canonical publish time
+- `score` → relevance score (search results only, higher = better)
+
+### Tier System
+
+| Tier | Access |
+|------|--------|
+| `anonymous` | Last 28 days only |
+| `free` | Last 90 days |
+| `premium` | Full archive |
+
+When tier restriction applies, the CLI shows: `⚠ Results limited to entries after {date} ({tier} tier)`.
 
 ## Search Behavior
 
-- **With query**: Results ranked by MiniSearch relevance score. Title matches weighted 3×, tags 2×, source 1.5×, content 1×.
-- **Without query** (filters only): Results sorted by published date descending.
+- **With query**: Results ranked by MiniSearch relevance score (title-only index for performance).
+- **Without query** (filters only via `feeds`): Results sorted by published date descending.
 - **Fuzzy matching**: Tolerates ~20% character distance (e.g. "inflaton" finds "inflation").
 - **Prefix matching**: Partial words match (e.g. "inflat" matches "inflation", "inflationary").
-- **Filters are AND-combined**: `search "oil" -c finance --from 2026-03-01` = keyword AND category AND date.
-- **Tags filter uses OR**: `-t 经济 -t 美国` matches entries with either tag.
+- **Filters are AND-combined**: `search "oil" --category finance --from 2026-03-01` = keyword AND category AND date.
 
 ## Available Categories
 
@@ -144,48 +161,49 @@ When `--json` is used, output is a JSON array of `SearchResult` objects:
 | `news` | International news (AP, Al Jazeera, BBC 中文, Foreign Affairs) |
 | `social` | Chinese social media (知乎热榜, 微博) |
 | `tech` | Tech blogs, Hacker News |
+| `blog` | Blog posts |
+| `podcast` | Podcast entries |
 
-## Programmatic API
+## TypeScript SDK
 
 ```typescript
-import { getFeeds, getFeedsByCategory, createSearchIndex } from "dak";
+import { DakClient } from "@littlelittlecloud/dak";
 
-// Access feeds
-const all = getFeeds();
-const finance = getFeedsByCategory("finance");
+const client = new DakClient({
+  baseUrl: "https://dak-server.fly.dev",
+  apiKey: "your-api-key", // optional
+});
 
 // Search
-const index = createSearchIndex();
-const results = index.search({ query: "inflation", category: "finance", limit: 20 });
-results[0].entry.title;   // article title
-results[0].entry.content; // full body
-results[0].score;         // relevance score
+const result = await client.search({ q: "inflation", category: "finance", limit: 20 });
+result.results[0].title;
+result.results[0].score;
+result.total;
+result.tier;
 
-// Autocomplete
-index.suggest("inflat"); // ["inflation", "inflationary", ...]
+// Browse feeds
+const feeds = await client.getFeeds({ category: "tech", limit: 10 });
+feeds.entries[0].title;
+feeds.entries[0].content;
+
+// By category / source
+const finance = await client.getFeedsByCategory("finance");
+const bloomberg = await client.getFeedsBySource("Bloomberg");
+
+// Single entry
+const entry = await client.getFeed("entry-id");
 
 // Stats
-index.stats(); // { totalDocuments, categories, sources, tags, dateRange }
-```
-
-## Rebuilding Data
-
-When feeds are updated (after `bun run fetch`), rebuild the search data:
-
-```bash
-cd pkg && bun run build:data && bun run build:ts
-```
-
-Or in one step:
-```bash
-cd pkg && bun run build
+const stats = await client.getStats();
+stats.total;        // total entries
+stats.byCategory;   // [{ category, count }]
+stats.bySource;     // [{ source, count }]
 ```
 
 ## Tips
 
-- For **daily summary** workflows: use `feeds --from --to --json -n 500` to get all posts for a specific date.
-- For **topic summary** workflows: use `search "keyword" --json -n 100` with optional category/date filters.
-- When results are large, pipe through `jq` for further filtering: `dak search "oil" --json | jq '[.[] | select(.score > 20)]'`
-- Use `--title-only` when you want precision over recall (avoids matching incidental keyword mentions in body text).
+- For **daily summary** workflows: use `dak feeds --from --to --json --limit 100` to get all posts for a specific date.
+- For **topic summary** workflows: use `dak search "keyword" --json --limit 100` with optional category/date filters.
+- When results are large, pipe through `jq` for further filtering: `dak search "oil" --json | jq '.results[] | select(.score > 20)'`
 - Combine Chinese and English keywords with separate searches when covering bilingual topics.
-- Each feed entry has a remote URL: `https://littlelittlecloud.github.io/The-Grand-Archive/#/entry/feeds/{category}/{filename}` (without `.md` extension). Use it as a Markdown reference link, e.g. `[title](https://littlelittlecloud.github.io/The-Grand-Archive/#/entry/feeds/finance/2026-03-06_U.S._payrolls_..._7705eefeb6d0)`.
+- Use `DAK_SERVER_URL=https://dak-server.fly.dev` to connect to the production server.

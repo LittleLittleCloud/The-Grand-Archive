@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { DakClient } from "@dak/sdk";
+import { DakClient } from "@littlelittlecloud/dak";
 import { searchCommand } from "./commands/search";
 import { feedsCommand } from "./commands/feeds";
 import { statsCommand } from "./commands/stats";

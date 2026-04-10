@@ -1,0 +1,65 @@
+name: Deploy Server & Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/contract/**"
+      - "packages/server/**"
+      - "packages/ui/**"
+      - "packages/sdk/**"
+      - "packages/ingestion-worker/**"
+      - "config/sources.yaml"
+      - "Dockerfile"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deploy target"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - server
+          - worker
+
+concurrency:
+  group: deploy-fly
+  cancel-in-progress: false
+
+jobs:
+  deploy-server:
+    if: >
+      github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'server') ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Fly
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy server
+        run: cd packages/server && flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-worker:
+    if: >
+      github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'worker') ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Fly
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy worker
+        run: cd packages/ingestion-worker && flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

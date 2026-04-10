@@ -1,11 +1,29 @@
 {
-  "name": "@dak/cli",
-  "version": "0.1.0",
+  "name": "@littlelittlecloud/dak-cli",
+  "version": "0.2.0",
+  "description": "大案牍库 CLI — Command-line interface for the Grand Archive",
   "type": "module",
   "bin": {
-    "dak": "./src/index.ts"
+    "dak": "dist/cli.js"
   },
-  "dependencies": {
-    "@dak/sdk": "workspace:*"
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LittleLittleCloud/The-Grand-Archive.git",
+    "directory": "packages/cli"
+  },
+  "keywords": ["rss", "feeds", "search", "大案牍库", "news", "cli"],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@littlelittlecloud/dak": "workspace:*",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.0"
   }
 }

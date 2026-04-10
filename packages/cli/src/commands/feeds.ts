@@ -1,4 +1,4 @@
-import type { DakClient } from "@dak/sdk";
+import type { DakClient } from "@littlelittlecloud/dak";
 import { parseArgs } from "../args";
 import { formatEntries, formatJson } from "../output";
 

@@ -485,7 +485,32 @@ DAK_SERVER_URL=http://localhost:3000 DAK_API_KEY=dak_xxx \
 |---|---|
 | **v2.0** | 6-package 拆分、SQLite + MiniSearch、自建 Auth、Litestream 备份 |
 | **v2.1** | GitHub OAuth (arctic 库)、用户角色管理 |
-| **v2.2** | MiniSearch → FTS5 迁移（如条目超 200K） |
+| **v2.2** | 搜索引擎优化：MiniSearch → SQLite FTS5（见下方 TODO） |
 | **v2.3** | 邮件密码重置 (Resend)、多用户支持 |
-| **Future** | AuthProvider 替换 (Clerk/Auth0)、Turso (分布式 SQLite)、Worker 分布式调度 |
+| **Future** | AuthProvider 替换 (Clerk/Auth0)、Turso (分布式 SQLite)、Worker 分布式调度、向量语义搜索 |
+
+### TODO: v2.2 搜索引擎迁移 — MiniSearch → SQLite FTS5
+
+**动机**：MiniSearch 在内存中构建索引，14K 条 title-only 索引占 364ms/~200MB，加上 content 需 6.5s/1.6GB。启动时全量 rebuild 导致 Fly.io 首次请求 502。FTS5 索引在磁盘上，启动零开销、零内存。
+
+**方案**：
+1. 创建 FTS5 虚拟表（content sync 模式，和 entries 表联动）：
+   ```sql
+   CREATE VIRTUAL TABLE entries_fts USING fts5(
+     title, content,
+     content=entries, content_rowid=rowid
+   );
+   -- 触发器自动同步插入/删除
+   ```
+2. 搜索查询改为 SQL：`SELECT ... FROM entries_fts WHERE entries_fts MATCH ? ORDER BY rank`
+3. 移除 MiniSearch 依赖，删除 `buildSearchIndex()`、`addToIndex()`
+4. category/source/date 过滤用 JOIN entries 表
+5. 中文分词：`tokenize="unicode61"` 或接 ICU 分词
+
+**基准数据**（14,456 条，本地 M 系列）：
+- MiniSearch title-only: 364ms 启动，~200MB
+- MiniSearch title+content: 6,517ms 启动，~1.6GB
+- FTS5: 0ms 启动，0MB 额外内存
+
+**注意**：FTS5 无内置 fuzzy 匹配，仅支持前缀搜索 (`inflat*`)。若需 typo tolerance 可后续考虑 Meilisearch。
 ```

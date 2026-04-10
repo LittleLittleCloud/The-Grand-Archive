@@ -1,4 +1,4 @@
-import type { SearchResult, Entry, StatsResponse } from "@dak/sdk";
+import type { SearchResult, Entry, StatsResponse } from "@littlelittlecloud/dak";
 
 export function formatTable(results: SearchResult[]): string {
   if (results.length === 0) return "No results found.";

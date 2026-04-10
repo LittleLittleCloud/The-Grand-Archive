@@ -1,8 +1,9 @@
 # 大案牍库
 
 [![npm](https://img.shields.io/npm/v/@littlelittlecloud/dak)](https://www.npmjs.com/package/@littlelittlecloud/dak)
+[![npm](https://img.shields.io/npm/v/@littlelittlecloud/dak-cli)](https://www.npmjs.com/package/@littlelittlecloud/dak-cli)
 
-从多源 RSS 自动收集、分类、索引新闻与资讯，并以 npm 包的形式提供全文搜索与结构化访问。
+从多源 RSS 自动收集、分类、索引新闻与资讯，提供全文搜索 API、TypeScript SDK 和 CLI 工具。
 
 ### 订阅源一览
 
@@ -16,20 +17,49 @@
 ## Highlights
 
 - **AI as First Citizen** — 内置 Claude Skills，AI Agent 可直接搜索、总结、分析所有 feed 内容
-- **大案牍库** (`dak`) — 基于 MiniSearch 的多维度搜索引擎，9700+ 条 feed 全文检索，支持按分类/来源/标签/时间多维过滤
+- **Server + API** — Hono 服务端，SQLite 存储 14,000+ 条 feed，MiniSearch 全文检索
+- **大案牍库** (`@littlelittlecloud/dak`) — TypeScript SDK，HTTP 客户端访问搜索、浏览、统计 API
 - **大案牍术** (`dak_summary`) — 从海量 feed 中自动提炼每日新闻总结与专题分析
-- **CLI + API** — `dak` 命令行工具 + TypeScript API，一行命令搜索、浏览、统计
-- **每日更新** — 每日自动更新rss feed，自动构建并发布到 npm
+- **CLI** (`@littlelittlecloud/dak-cli`) — `dak` 命令行工具，一行命令搜索、浏览、统计
+- **自动更新** — 每 30 分钟自动抓取 RSS feed
+
+## 架构
+
+```
+┌─────────────┐    ┌─────────────────┐    ┌──────────────┐
+│  RSS Feeds  │───▶│ Ingestion Worker│───▶│   SQLite DB  │
+└─────────────┘    └─────────────────┘    └──────┬───────┘
+                                                 │
+                          ┌──────────────────────┤
+                          ▼                      ▼
+                   ┌─────────────┐       ┌──────────────┐
+                   │  Hono API   │       │  MiniSearch   │
+                   │   Server    │       │    Index      │
+                   └──────┬──────┘       └──────────────┘
+                          │
+            ┌─────────────┼─────────────┐
+            ▼             ▼             ▼
+      ┌──────────┐ ┌──────────┐ ┌──────────┐
+      │   SDK    │ │   CLI    │ │   Web UI │
+      └──────────┘ └──────────┘ └──────────┘
+```
+
+## npm 包
+
+| 包 | 说明 |
+|----|------|
+| [`@littlelittlecloud/dak`](https://www.npmjs.com/package/@littlelittlecloud/dak) | TypeScript SDK — HTTP 客户端，支持 ESM / CJS |
+| [`@littlelittlecloud/dak-cli`](https://www.npmjs.com/package/@littlelittlecloud/dak-cli) | CLI 工具 — `dak` 命令，零依赖单文件 bundle |
 
 ## 安装
 
 ```bash
+# SDK（在项目中使用）
 npm install @littlelittlecloud/dak
-# 或全局安装 CLI
-npm install -g @littlelittlecloud/dak
-```
 
-安装后即可使用 `dak` 命令行工具，或在代码中 `import` 使用。
+# CLI（全局安装）
+npm install -g @littlelittlecloud/dak-cli
+```
 
 ## Skills
 
@@ -88,41 +118,45 @@ cp -r skills/dak /your-project/.claude/skills/dak
 cp -r skills/dak_summary /your-project/.claude/skills/dak_summary
 
 # 确保 dak CLI 可用
-npm install -g @littlelittlecloud/dak
+npm install -g @littlelittlecloud/dak-cli
 ```
 
 ## dak CLI
 
+CLI 通过 HTTP 连接 dak-server API，需设置服务器地址：
+
+```bash
+export DAK_SERVER_URL=https://dak-server.fly.dev  # 默认 http://localhost:3000
+export DAK_API_KEY=your-api-key                    # 可选，用于认证访问
+```
+
 ### 搜索
 
 ```bash
-# 全文搜索（标题 + 正文）
+# 全文搜索
 dak search "inflation"
 
-# 按分类 + 关键词
-dak search "oil price" -c finance --from 2026-03-01
+# 按分类 + 时间过滤
+dak search "oil price" --category finance --from 2026-03-01
 
-# 仅搜索标题（更精确）
-dak search "AI" --title-only -n 10
-
-# 按标签筛选
-dak search -t 中东 -t 地缘政治 --from 2026-03-01
+# 限制结果数量
+dak search "AI" --limit 10
 
 # JSON 输出（便于管道处理）
-dak search "tariff" --json -n 50
+dak search "tariff" --json
 ```
 
 ### 浏览
 
 ```bash
-# 列出某天的所有条目
-dak feeds --from 2026-04-02 --to 2026-04-02 -n 100
+# 列出最新条目
+dak feeds
 
 # 按分类浏览
-dak feeds -c tech -n 20
+dak feeds --category tech --limit 20
 
-# 按来源浏览，显示正文摘要
-dak feeds -s Bloomberg -n 10 --content
+# 按来源浏览
+dak feeds --source Bloomberg --limit 10
 ```
 
 ### 其他
@@ -131,83 +165,82 @@ dak feeds -s Bloomberg -n 10 --content
 # 查看索引统计
 dak stats
 
-# 搜索建议（自动补全）
+# 搜索建议
 dak suggest "inflat"
 ```
 
 ### 完整选项
 
-| 选项 | 缩写 | 说明 |
-|------|------|------|
-| `--category <cat>` | `-c` | 按分类过滤：`finance` / `news` / `social` / `tech` |
-| `--source <src>` | `-s` | 按来源过滤（模糊匹配） |
-| `--tag <tag>` | `-t` | 按标签过滤（可多次使用，OR 逻辑） |
-| `--author <author>` | `-a` | 按作者过滤 |
-| `--from <date>` | | 发布时间起始（YYYY-MM-DD，含） |
-| `--to <date>` | | 发布时间截止（YYYY-MM-DD，含） |
-| `--title-only` | | 仅搜索标题字段 |
-| `--limit <n>` | `-n` | 返回数量上限（默认 20） |
-| `--json` | | JSON 格式输出 |
-| `--content` | | 显示正文摘要 |
+| 选项 | 说明 |
+|------|------|
+| `--category <cat>` | 按分类过滤：`finance` / `news` / `social` / `tech` / `blog` / `podcast` |
+| `--source <src>` | 按来源过滤 |
+| `--from <date>` | 发布时间起始（ISO 8601） |
+| `--to <date>` | 发布时间截止（ISO 8601） |
+| `--limit <n>` | 返回数量上限（默认 20） |
+| `--json` | JSON 格式输出 |
 
-## 编程 API
+## SDK
 
 ```typescript
-import { getFeeds, getFeedsByCategory, createSearchIndex } from "@littlelittlecloud/dak";
+import { DakClient } from "@littlelittlecloud/dak";
 
-// 获取所有条目
-const all = getFeeds(); // FeedEntry[]
-
-// 按分类获取
-const finance = getFeedsByCategory("finance");
-
-// 创建搜索索引（建议复用）
-const index = createSearchIndex();
+const client = new DakClient({
+  baseUrl: "https://dak-server.fly.dev",
+  apiKey: "your-api-key", // 可选
+});
 
 // 搜索
-const results = index.search({
-  query: "inflation",
+const result = await client.search({
+  q: "inflation",
   category: "finance",
-  dateFrom: "2026-03-01",
+  from: "2026-03-01",
   limit: 20,
 });
 
-results[0].entry.title;   // 标题
-results[0].entry.content; // 完整正文
-results[0].score;         // 相关度评分
+result.results[0].title;   // 标题
+result.results[0].score;   // 相关度评分
+result.total;              // 总匹配数
+result.tier;               // "anonymous" | "free" | "premium"
 
-// 自动补全
-index.suggest("inflat");
-// → ["inflation", "inflationary", "inflated"]
+// 浏览
+const feeds = await client.getFeeds({ category: "tech", limit: 10 });
+feeds.entries[0].title;
 
-// 索引统计
-index.stats();
-// → { totalDocuments: 9707, categories: [...], sources: [...], ... }
+// 按分类/来源
+const finance = await client.getFeedsByCategory("finance");
+const bloomberg = await client.getFeedsBySource("Bloomberg");
+
+// 单条详情
+const entry = await client.getFeed("entry-id");
+
+// 统计
+const stats = await client.getStats();
+stats.total;           // 总条目数
+stats.byCategory;      // [{ category, count }]
+stats.bySource;        // [{ source, count }]
 ```
 
-### 更多 API
+### API 方法
 
-| 函数 | 说明 |
+| 方法 | 说明 |
 |------|------|
-| `getFeeds()` | 所有条目（按发布时间降序） |
-| `getFeedsByCategory(cat)` | 按分类 |
-| `getFeedsBySource(src)` | 按来源 |
-| `getFeedsByTags(tags)` | 按标签（OR） |
-| `getFeedById(id)` | 按 ID（hash） |
-| `getFeedsByDateRange(from, to)` | 按时间范围 |
-| `getCategories()` | 分类列表 |
-| `getSources()` | 来源列表 |
-| `getAllTags()` | 标签列表 |
+| `search(params)` | 全文搜索，支持分类/来源/时间/分页 |
+| `getFeeds(params?)` | 浏览条目，支持多维过滤 |
+| `getFeed(id)` | 按 ID 获取单条 |
+| `getFeedsByCategory(cat)` | 按分类获取 |
+| `getFeedsBySource(src)` | 按来源获取 |
+| `getStats()` | 获取索引统计 |
 
 ## 搜索能力
 
-基于 [MiniSearch](https://lucaong.github.io/minisearch/) 构建：
+基于 [MiniSearch](https://lucaong.github.io/minisearch/) 构建，14,000+ 条 feed 全文检索：
 
-- **全文检索** — 标题权重 3×、标签 2×、来源 1.5×、正文 1×
+- **标题检索** — 快速匹配（364ms 构建索引，低内存占用）
 - **模糊匹配** — 容错约 20% 字符距离（`inflaton` → `inflation`）
 - **前缀匹配** — `inflat` 匹配 `inflation`、`inflationary`
-- **多维过滤** — category、source、tags、author、language、date range
-- **过滤逻辑** — 各维度 AND 组合，tags 内部 OR
+- **多维过滤** — category、source、date range
+- **Tier 限制** — anonymous（28 天）、free（90 天）、premium（无限制）
 
 ## 数据源
 
@@ -215,10 +248,36 @@ index.stats();
 
 ## 开发
 
-### RSS Feed 收集
+### 项目结构
+
+```
+packages/
+  contract/     # Zod schemas, types, route constants (workspace-only)
+  server/       # Hono API server + SQLite + MiniSearch
+  sdk/          # @littlelittlecloud/dak — HTTP client SDK
+  cli/          # @littlelittlecloud/dak-cli — CLI tool
+  ingestion-worker/  # RSS 抓取 worker（每 30 分钟）
+  ui/           # Web dashboard
+```
+
+### 本地开发
 
 ```bash
 bun install
+
+# 启动 API 服务器
+cd packages/server && bun run dev
+
+# 运行 ingestion worker（一次性模式）
+cd packages/ingestion-worker && ONCE=1 bun run src/index.ts
+
+# CLI 开发（直接用 bun 运行）
+cd packages/cli && bun run src/index.ts search "test"
+```
+
+### RSS Feed 收集
+
+```bash
 bun run fetch              # 抓取所有已启用的订阅源
 bun run fetch finance      # 只抓取 finance 分类
 bun run list               # 列出已保存的条目
@@ -239,12 +298,26 @@ bun run sources            # 查看所有订阅源
   description: 简短描述
 ```
 
-### 构建 dak 包
+### 构建 npm 包
 
 ```bash
-cd pkg
-bun install
-bun run build          # 构建数据 + 编译 TypeScript
+# SDK
+cd packages/sdk && bun run build
+
+# CLI
+cd packages/cli && bun run build
+```
+
+### 部署
+
+Server 和 Worker 部署在 Fly.io（Tokyo nrt）：
+
+```bash
+# Server
+cd packages/server && fly deploy
+
+# Worker
+cd packages/ingestion-worker && fly deploy
 ```
 
 ### Dashboard
@@ -259,8 +332,8 @@ bun run deploy         # 部署到 GitHub Pages
 
 | Workflow | 触发 | 作用 |
 |----------|------|------|
-| `fetch-feeds` | 每 30 分钟 / 手动 | 抓取 RSS → 提交 → 部署 Pages → 发布 dak |
-| `publish-dak` | feeds 更新后自动 / 手动 | 构建并发布 `@littlelittlecloud/dak` 到 npm |
+| `fetch-feeds` | 每 30 分钟 / 手动 | 抓取 RSS → 提交新 feed 文件 |
+| `publish-dak` | feeds 更新后自动 / 手动 | 构建并发布 `@littlelittlecloud/dak` + `@littlelittlecloud/dak-cli` 到 npm |
 | `deploy` | 手动 | 构建并部署 Dashboard 到 GitHub Pages |
 
 ## License

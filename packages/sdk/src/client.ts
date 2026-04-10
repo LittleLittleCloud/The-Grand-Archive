@@ -5,7 +5,7 @@ import type {
   FeedsResponse,
   Entry,
   StatsResponse,
-} from "@dak/contract";
+} from "./types";
 import { ROUTES } from "@dak/contract";
 
 export interface DakClientOptions {
@@ -43,7 +43,7 @@ export class DakClient {
     return res.json() as Promise<T>;
   }
 
-  private buildQuery(params: Record<string, unknown>): string {
+  private buildQuery(params: object): string {
     const entries = Object.entries(params).filter(
       ([, v]) => v !== undefined && v !== null
     );

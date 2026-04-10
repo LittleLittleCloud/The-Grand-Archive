@@ -1,35 +1,16 @@
 {
   "name": "大案牍库",
-  "module": "index.ts",
   "type": "module",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
-  "scripts": {
-    "fetch": "bun run index.ts fetch",
-    "list": "bun run index.ts list",
-    "sources": "bun run index.ts sources",
-    "help": "bun run index.ts help",
-    "generate": "bun run src/generate.ts",
-    "dev": "bun run generate && cd web && bun run dev",
-    "build": "bun run generate && cd web && bun run build",
-    "preview": "cd web && bun run preview",
-    "deploy": "bun run build && cd web && npx gh-pages -d dist"
-  },
   "devDependencies": {
     "@drawio/mcp": "^1.2.2",
     "@types/bun": "latest",
-    "@types/node": "^25.5.0",
-    "@types/turndown": "^5.0.6"
+    "@types/node": "^25.5.0"
   },
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "dependencies": {
-    "gray-matter": "^4.0.3",
-    "rss-parser": "^3.13.0",
-    "turndown": "^7.2.2",
-    "yaml": "^2.8.2"
   }
 }

@@ -10,4 +10,4 @@ export type {
   StatsResponse,
   CategoryStat,
   SourceStat,
-} from "@dak/contract";
+} from "./types";
