@@ -55,7 +55,7 @@ async function main() {
 
   for (const t of ["users", "sessions", "account", "verification"]) {
     const exists = db
-      .query<{ name: string }, []>(
+      .query<{ name: string }, [string]>(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
       )
       .get(t);
