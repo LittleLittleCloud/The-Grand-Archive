@@ -101,28 +101,7 @@ export const IngestResponseSchema = z.object({
   duplicates: z.number(),
 });
 
-// ─── Auth ───────────────────────────────────────────────
-
-export const RegisterRequestSchema = z.object({
-  username: z.string().min(3).max(32),
-  password: z.string().min(8),
-  email: z.string().email().nullable().optional(),
-});
-
-export const LoginRequestSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(8),
-});
-
-export const UserSchema = z.object({
-  id: z.string(),
-  username: z.string(),
-  email: z.string().nullable(),
-  role: z.enum(["admin", "user"]),
-  plan: z.enum(["free", "premium"]),
-  req_balance: z.number(),
-  created_at: z.string(),
-});
+// ─── Auth (Better Auth handles user/session; we only define API key schemas) ─
 
 export const ApiKeyCreateRequestSchema = z.object({
   name: z.string().min(1).max(64),

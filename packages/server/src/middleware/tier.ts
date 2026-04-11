@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
-import { sessionMiddleware } from "./session";
 import { apiKeyMiddleware } from "./api-key";
+import { auth } from "../auth/better-auth";
 import { getDb } from "../db/client";
 
 export type Tier = "anonymous" | "free" | "premium";
@@ -23,12 +23,20 @@ const counters = new Map<string, { count: number; windowStart: number }>();
  * Combined middleware: identify user → resolve tier → enforce rate limit → set maxAge.
  */
 export function tierMiddleware() {
-  const session = sessionMiddleware();
   const apiKey = apiKeyMiddleware();
 
   return async (c: Context, next: Next) => {
-    // Step 1: try to identify user via session or API key
-    await session(c, async () => {});
+    // Step 1: try Better Auth session
+    try {
+      const session = await auth.api.getSession({ headers: c.req.raw.headers });
+      if (session) {
+        c.set("userId", session.user.id);
+      }
+    } catch {
+      // Invalid session — ignore
+    }
+
+    // Step 2: try API key (if not already identified via session)
     await apiKey(c, async () => {});
 
     // Step 2: resolve tier
@@ -39,12 +47,12 @@ export function tierMiddleware() {
     if (userId) {
       const db = getDb();
       const user = db
-        .query("SELECT plan, req_balance FROM users WHERE id = ?")
-        .get(userId) as { plan: string; req_balance: number } | null;
+        .query("SELECT plan, reqBalance FROM users WHERE id = ?")
+        .get(userId) as { plan: string; reqBalance: number } | null;
 
       if (user) {
         tier = user.plan === "premium" ? "premium" : "free";
-        reqBalance = user.req_balance;
+        reqBalance = user.reqBalance;
       }
     }
 
@@ -88,11 +96,11 @@ export function tierMiddleware() {
 
     counter.count++;
 
-    // Deduct from req_balance if over plan limit and user has balance
+    // Deduct from reqBalance if over plan limit and user has balance
     if (userId && counter.count > config.rateLimit && reqBalance > 0) {
       const db = getDb();
       db.query(
-        "UPDATE users SET req_balance = req_balance - 1 WHERE id = ? AND req_balance > 0"
+        "UPDATE users SET reqBalance = reqBalance - 1 WHERE id = ? AND reqBalance > 0"
       ).run(userId);
     }
 

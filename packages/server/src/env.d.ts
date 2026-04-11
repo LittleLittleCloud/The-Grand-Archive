@@ -4,7 +4,6 @@ import type { Tier } from "./middleware/tier";
 declare module "hono" {
   interface ContextVariableMap {
     userId: string | undefined;
-    sessionId: string | undefined;
     apiKeyId: string | undefined;
     tier: Tier;
     maxAge: string | null;

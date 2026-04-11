@@ -1,11 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
-import { api, ApiError } from "./api";
-import type { SearchResponse, User } from "@dak/contract";
+import { useState, useEffect } from "react";
+import { api } from "./api";
+import type { SearchResponse } from "@dak/contract";
 import { LandingPage } from "./LandingPage";
 import { LoginPage } from "./LoginPage";
 import { SignUpPage } from "./SignUpPage";
+import { ForgotPasswordPage } from "./ForgotPasswordPage";
+import { ResetPasswordPage } from "./ResetPasswordPage";
+import { VerifyEmailPage } from "./VerifyEmailPage";
 import { ApiKeysPage } from "./ApiKeysPage";
+import { SettingsPage } from "./SettingsPage";
 import { AppBar } from "./AppBar";
+import { useSession, signOut } from "./auth-client";
 
 function useHash() {
   const [hash, setHash] = useState(window.location.hash);
@@ -19,27 +24,13 @@ function useHash() {
 
 export function App() {
   const hash = useHash();
-  const [user, setUser] = useState<User | null>(null);
-
-  const fetchUser = useCallback(() => {
-    api.getMe().then(setUser).catch(() => setUser(null));
-  }, []);
-
-  useEffect(() => {
-    fetchUser();
-    const onAuthChange = () => fetchUser();
-    window.addEventListener("auth-change", onAuthChange);
-    return () => window.removeEventListener("auth-change", onAuthChange);
-  }, [fetchUser]);
+  const { data: session } = useSession();
+  const user = session?.user ?? null;
 
   const handleLogout = async () => {
-    try {
-      await api.logout();
-    } catch (e) {
-      if (!(e instanceof ApiError)) throw e;
-    }
-    setUser(null);
+    await signOut();
     window.location.hash = "#/";
+    window.location.reload();
   };
 
   if (hash === "#/login") {
@@ -50,9 +41,22 @@ export function App() {
     return <SignUpPage />;
   }
 
+  if (hash === "#/forgot-password") {
+    return <ForgotPasswordPage />;
+  }
+
+  if (hash === "#/reset-password") {
+    return <ResetPasswordPage />;
+  }
+
+  if (hash === "#/verify-email") {
+    return <VerifyEmailPage />;
+  }
+
   const page = (() => {
     if (hash === "#/search") return <SearchPage />;
     if (hash === "#/api-keys") return <ApiKeysPage />;
+    if (hash === "#/settings") return <SettingsPage />;
     return <LandingPage />;
   })();
 

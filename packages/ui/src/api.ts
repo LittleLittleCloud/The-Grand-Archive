@@ -3,7 +3,6 @@ import type {
   FeedsResponse,
   Entry,
   StatsResponse,
-  User,
   ApiKey,
   ApiKeyCreateResponse,
 } from "@dak/contract";
@@ -79,25 +78,6 @@ export const api = {
     request<Entry>(ROUTES.FEED_BY_ID.replace(":id", encodeURIComponent(id))),
 
   getStats: () => request<StatsResponse>(ROUTES.STATS),
-
-  // ─── Auth ─────────────────────────────────────────────
-
-  register: (username: string, password: string, email?: string) =>
-    request<{ ok: boolean }>(ROUTES.AUTH_REGISTER, {
-      method: "POST",
-      body: JSON.stringify({ username, password, email: email || null }),
-    }),
-
-  login: (username: string, password: string) =>
-    request<{ ok: boolean }>(ROUTES.AUTH_LOGIN, {
-      method: "POST",
-      body: JSON.stringify({ username, password }),
-    }),
-
-  logout: () =>
-    request<{ ok: boolean }>(ROUTES.AUTH_LOGOUT, { method: "POST" }),
-
-  getMe: () => request<User>(ROUTES.AUTH_ME),
 
   // ─── API Keys ─────────────────────────────────────────
 

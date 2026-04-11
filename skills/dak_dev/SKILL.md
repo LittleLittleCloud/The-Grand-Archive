@@ -1,114 +1,50 @@
 ```skill
 ---
 name: dak_dev
-description: "大案牍库 v2 开发规范 — 6-package Bun monorepo 架构设计、技术栈选型、Auth 方案、数据库与备份策略、API 路由定义、部署流程，以及未来演进路线。"
-version: 0.1.0
+description: "大案牍库 v2 开发规范 — 基于 bun-saas-scaffold 的 RSS 聚合/全文搜索平台，包含业务领域定义、搜索引擎、Ingestion Worker、UI 设计体系等 dak 特有约定。"
+version: 0.2.0
 ---
 
 # 大案牍库 v2 — Developer Skill
 
-本 Skill 是 dak v2 重构的完整开发蓝图，涵盖架构、技术栈、实现细节和演进路线。
-所有代码实现必须遵循本文档中的约定。
+本 Skill 基于 `bun-saas-scaffold`，仅包含大案牍库特有的业务逻辑和定制。
+通用架构（monorepo 结构、Auth、Multi-Tenant、Tier、部署、SDK/CLI 模板等）见 scaffold。
+
+**Scaffold 占位符绑定**：
+- `{app}` = `dak`
+- `{scope}` = `@dak`
+- `{prefix}` = `dak`
+- `{appname}` = `dak`
 
 ---
 
-## 1. 架构总览
+## 1. 业务领域 — RSS 聚合与全文搜索
 
-v2 将现有单体仓库拆为 **6 个 Bun workspace 包**，通过 `@dak/contract` 实现类型安全的松耦合。
+大案牍库是一个多源 RSS 内容聚合平台，核心功能：
+- **Ingestion**：从 RSS/Atom 源自动抓取内容，转为 Markdown，去重后写入
+- **Search**：中英文全文搜索（SQLite FTS5 + jieba 分词）
+- **Feeds**：按分类、来源、时间范围浏览条目
+- **Stats**：分类计数、来源统计
 
-```
-┌─────────────────────────────────────────────┐
-│                @dak/contract                │  Zod schemas · TS types · route constants
-└────────┬──────────┬──────────┬──────────────┘
-         │          │          │
-    build-time  build-time  build-time
-         │          │          │
-   ┌─────▼──┐  ┌───▼───┐  ┌──▼──────────────┐
-   │ server │  │  sdk  │  │ ingestion-worker │
-   └───┬────┘  └───┬───┘  └────────┬─────────┘
-       │           │               │
-       │       build-time     runtime HTTP
-       │           │          POST /api/entries
-   ┌───▼───┐  ┌───▼──┐            │
-   │  ui   │  │ cli  │            │
-   └───────┘  └──────┘            │
-       │                          │
-       └──── runtime HTTP ────────┘
-             (all query APIs)
-```
-
-### 包依赖规则
-| 包 | 依赖 | 说明 |
-|---|---|---|
-| `@dak/contract` | zod | 零运行时依赖，纯类型/schema |
-| `@dak/server` | hono, minisearch, @dak/contract | 唯一包含 DB 和搜索引擎的包 |
-| `@dak/ui` | react, react-dom, jotai, zustand, @dak/contract | SPA，独立部署，通过 HTTP 调用 server |
-| `@dak/sdk` | @dak/contract | fetch-based HTTP client，npm 发布 |
-| `@dak/cli` | @dak/sdk | 终端工具，npm 发布 (bin: dak) |
-| `@dak/ingestion-worker` | rss-parser, turndown, @dak/contract | 仅依赖 contract，通过 HTTP 上传 |
-
-**关键约束**：
-- `ui` 和 `sdk` **不**依赖 `server`（避免引入 sqlite/minisearch）
-- `ingestion-worker` **不**依赖 `sdk`（worker 只需 POST，不需要查询能力）
-- 所有 API 类型定义集中在 `contract`，其他包通过 `z.infer<>` 派生 TS 类型
+### 分类体系
+`finance` | `news` | `tech` | `social` | `blog` | `podcast` | `uncategorized`
 
 ---
 
-## 2. 商业策略
-
-四级访问层级，逐步引导用户付费：
-
-| Tier | 数据范围 | Rate Limit | 获取方式 |
-|---|---|---|---|
-| **Anonymous** | 最近 4 周 | 10 reqs/min | 无需注册 |
-| **Free** | 最近 3 个月 | 60 reqs/min | 注册登录 |
-| **Premium** | 全部历史数据 | 120 reqs/min | 付费订阅 |
-| **Request Pack** | 同当前 plan | 额外配额叠加 | 按次购买 |
-
-### 设计原则
-- Anonymous 用户可使用全部功能（搜索、feeds、stats），仅限制数据范围和频率
-- 登录即可大幅提升体验（3 个月 + 6× rate limit），降低注册阻力
-- Premium 解锁全量历史数据 + 更高 rate limit
-- 对于突发高频需求（如批量导出、CI 集成），用户可购买 Request Pack 叠加配额
-
-### Rate Limit 实现
-- middleware 根据用户 tier 读取对应配额
-- 使用内存计数器（滑动窗口），key = userId 或 IP
-- 响应头包含 `X-RateLimit-Limit`、`X-RateLimit-Remaining`、`X-RateLimit-Reset`
-- 超限返回 429（见 API 路由章节）
-
-### 数据范围过滤
-- middleware 注入 `maxAge` 参数到查询上下文
-- Anonymous: `WHERE published >= date('now', '-28 days')`
-- Free: `WHERE published >= date('now', '-3 months')`
-- Premium / Request Pack: 无时间限制
-
----
-
-## 3. 技术栈
+## 2. 额外技术栈（scaffold 之外）
 
 | 层 | 选型 | 理由 |
 |---|---|---|
-| Runtime | **Bun** | 内置 SQLite、原生 TS、快速启动 |
-| Server | **Hono** | 轻量、可移植 (Bun/Node/CF Workers)、middleware 生态好 |
-| Database | **bun:sqlite** | 零额外依赖、WAL 模式、路径 `/data/dak.db` |
-| Search | **MiniSearch** | 内存全文索引、title 加权 3×、fuzzy + prefix |
-| Auth | **自建** | Bun.password (argon2id) + hono/jwt + crypto.randomUUID |
-| Contract | **Zod** | schema = single source of truth，runtime 校验 + 类型推导 |
-| SPA | **React + Vite + Tailwind** | 现有 web/ 改造 |
-| State | **Jotai + Zustand** | Jotai 管理服务端/派生状态，Zustand 管理客户端 UI 状态 |
+| Search | **SQLite FTS5** + **@node-rs/jieba** | 磁盘索引、零启动开销、中文分词 |
 | RSS | **rss-parser + turndown** | RSS/Atom 解析 + HTML→Markdown |
-| Build | **Bun workspaces** | monorepo，无需 turborepo |
-| Backup | **Litestream → Cloudflare R2** | WAL 流式备份，~1s 延迟，零性能损耗 |
-| Deploy | **Fly.io** | Volume 挂载 /data，NRT region |
+| State | **Jotai + Zustand** | Jotai 管理服务端/派生状态，Zustand 管理客户端 UI 状态 |
 
 ---
 
-## 4. 数据库设计
+## 3. 数据库 — dak 业务表
 
-使用 `bun:sqlite`，WAL 模式，DB 文件路径 `DB_PATH=/data/dak.db`。
-
-### 表结构
+scaffold 已提供 users、api_keys、sessions、tenants、tenant_members 表。
+以下是 dak 特有的业务表：
 
 ```sql
 -- 核心内容表
@@ -126,94 +62,159 @@ CREATE TABLE entries (
   created_at  TEXT DEFAULT (datetime('now'))
 );
 
--- 用户表
-CREATE TABLE users (
-  id          TEXT PRIMARY KEY DEFAULT (hex(randomblob(16))),
-  username    TEXT UNIQUE NOT NULL,
-  email       TEXT UNIQUE,
-  password    TEXT NOT NULL,          -- argon2id hash via Bun.password
-  role        TEXT DEFAULT 'user',    -- admin | user
-  plan        TEXT DEFAULT 'free',    -- free | premium
-  req_balance INTEGER DEFAULT 0,      -- 剩余购买请求次数（Request Pack）
-  created_at  TEXT DEFAULT (datetime('now'))
+CREATE INDEX IF NOT EXISTS idx_entries_category ON entries(category);
+CREATE INDEX IF NOT EXISTS idx_entries_source ON entries(source);
+CREATE INDEX IF NOT EXISTS idx_entries_published ON entries(published);
+
+-- FTS5 全文索引（content sync 模式，与 entries 联动）
+CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
+  title, content,
+  content=entries, content_rowid=rowid,
+  tokenize="unicode61"
 );
 
--- API 密钥表
-CREATE TABLE api_keys (
-  id          TEXT PRIMARY KEY DEFAULT (hex(randomblob(16))),
-  user_id     TEXT NOT NULL REFERENCES users(id),
-  name        TEXT NOT NULL,          -- human label
-  prefix      TEXT NOT NULL,          -- key 前 8 字符，用于列表展示
-  hash        TEXT NOT NULL,          -- SHA-256 hash of full key
-  last_used   TEXT,
-  created_at  TEXT DEFAULT (datetime('now'))
-);
-
--- 会话表
-CREATE TABLE sessions (
-  id          TEXT PRIMARY KEY,       -- JWT jti
-  user_id     TEXT NOT NULL REFERENCES users(id),
-  expires_at  TEXT NOT NULL,
-  created_at  TEXT DEFAULT (datetime('now'))
-);
+-- 自动同步触发器
+CREATE TRIGGER IF NOT EXISTS entries_ai AFTER INSERT ON entries BEGIN
+  INSERT INTO entries_fts(rowid, title, content)
+    VALUES (new.rowid, new.title, new.content);
+END;
+CREATE TRIGGER IF NOT EXISTS entries_ad AFTER DELETE ON entries BEGIN
+  INSERT INTO entries_fts(entries_fts, rowid, title, content)
+    VALUES('delete', old.rowid, old.title, old.content);
+END;
+CREATE TRIGGER IF NOT EXISTS entries_au AFTER UPDATE ON entries BEGIN
+  INSERT INTO entries_fts(entries_fts, rowid, title, content)
+    VALUES('delete', old.rowid, old.title, old.content);
+  INSERT INTO entries_fts(rowid, title, content)
+    VALUES (new.rowid, new.title, new.content);
+END;
 ```
 
 ### 容量预估
-- 当前 ~9,700 条，月增 ~10K
+- 当前 ~14K 条，月增 ~10K
 - SQLite 单文件轻松处理 60 万+ 行（数年无压力）
-- MiniSearch 内存索引在 ~200K 条时可能达到 ~500MB，届时考虑迁移至 SQLite FTS5
+- FTS5 索引在磁盘上，启动零开销、零额外内存
 
 ---
 
-## 5. Auth 设计
+## 4. Contract — dak 业务 Schema
 
-### 两种认证方式
-
-| 场景 | 方式 | middleware |
-|---|---|---|
-| SPA 登录 | Cookie-based session (JWT in httpOnly cookie) | `session.ts` |
-| SDK / Worker / CI | API Key (Bearer token / X-API-Key header) | `api-key.ts` |
-
-### Auth 流程
-
-```
-SPA Login:
-  POST /api/auth/login { username, password }
-  → Bun.password.verify(password, hash)
-  → 生成 JWT (sub=userId, jti=sessionId, exp=7d)
-  → Set-Cookie: dak_session=<jwt>; HttpOnly; Secure; SameSite=Strict
-
-API Key:
-  POST /api/api-keys { name }         → 生成 UUID key，返回明文（仅此一次）
-  请求时: Authorization: Bearer dak_xxxx  或  X-API-Key: dak_xxxx
-  → SHA-256(key) → 查 api_keys 表匹配 hash
-```
-
-### AuthProvider 接口（未来可换）
+scaffold 已提供 Auth 相关 schema。以下是 dak 特有的业务 schema：
 
 ```typescript
-interface AuthProvider {
-  hashPassword(plain: string): Promise<string>;
-  verifyPassword(plain: string, hash: string): Promise<boolean>;
-  createSession(userId: string): Promise<{ token: string; expiresAt: Date }>;
-  verifySession(token: string): Promise<{ userId: string } | null>;
-  revokeSession(token: string): Promise<void>;
-}
+import { z } from "zod";
+
+// ─── Entry ──────────────────────────────────────────────
+
+export const EntrySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  content: z.string().nullable(),
+  url: z.string().nullable(),
+  source: z.string(),
+  category: z.enum([
+    "finance", "news", "tech", "social", "blog", "podcast", "uncategorized",
+  ]),
+  tags: z.array(z.string()).default([]),
+  author: z.string().nullable(),
+  language: z.string().default("en"),
+  published: z.string(),
+  created_at: z.string().optional(),
+});
+
+export const EntryCreateSchema = EntrySchema.omit({ created_at: true });
+
+// ─── Search ─────────────────────────────────────────────
+
+export const SearchRequestSchema = z.object({
+  q: z.string().min(1),
+  category: z.string().optional(),
+  source: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const SearchResultSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  source: z.string(),
+  category: z.string(),
+  published: z.string(),
+  score: z.number(),
+});
+
+export const SearchResponseSchema = z.object({
+  results: z.array(SearchResultSchema),
+  total: z.number(),
+  query: z.string(),
+  tier: z.enum(["anonymous", "free", "premium"]),
+  tierCutoff: z.string().nullable(),
+});
+
+// ─── Feeds ──────────────────────────────────────────────
+
+export const FeedsRequestSchema = z.object({
+  category: z.string().optional(),
+  source: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const FeedsResponseSchema = z.object({
+  entries: z.array(EntrySchema),
+  total: z.number(),
+});
+
+// ─── Stats ──────────────────────────────────────────────
+
+export const StatsResponseSchema = z.object({
+  total: z.number(),
+  byCategory: z.array(z.object({ category: z.string(), count: z.number() })),
+  bySource: z.array(z.object({ source: z.string(), count: z.number() })),
+  lastUpdated: z.string().nullable(),
+});
+
+// ─── Ingest ─────────────────────────────────────────────
+
+export const IngestRequestSchema = z.object({
+  entries: z.array(EntryCreateSchema).min(1).max(1000),
+});
+
+export const IngestResponseSchema = z.object({
+  inserted: z.number(),
+  duplicates: z.number(),
+});
 ```
 
-初期使用自建实现 (`BunAuthProvider`)，未来可替换为 GitHub OAuth (arctic 库) 或第三方服务。
+### routes.ts — dak 业务路由
 
-### 密码重置
-- v2 初期：管理员 CLI 命令 `dak admin reset-password <username>`
-- 未来：通过 Resend 发送邮件重置
+```typescript
+export const ROUTES = {
+  // 业务路由
+  SEARCH:      "/api/search",
+  FEEDS:       "/api/feeds",
+  FEED_BY_ID:  "/api/feeds/:id",
+  STATS:       "/api/stats",
+  ENTRIES:     "/api/entries",          // ingestion-worker POST
+
+  // Auth 由 Better Auth 处理（/api/auth/** 自动路由）
+  // 包括: sign-up/email, sign-in/username, sign-out, get-session 等
+  API_KEYS:         "/api/api-keys",       // 自管理
+  API_KEY_BY_ID:    "/api/api-keys/:id",
+} as const;
+```
 
 ---
 
-## 6. API 路由
+## 5. API 路由 — dak 特有
 
-所有路由挂载在 Hono app 下，以 `/api` 为前缀。
+scaffold 标准 auth/api-keys 路由之外，dak 增加以下：
 
-### 公开路由
+### 公开路由（按 Tier 限制数据范围和频率）
 | Method | Path | 说明 |
 |---|---|---|
 | GET | `/api/search?q=&category=&source=&from=&to=` | 全文搜索 |
@@ -221,37 +222,11 @@ interface AuthProvider {
 | GET | `/api/feeds/:id` | 单条详情 |
 | GET | `/api/stats` | 分类计数、来源统计 |
 
-公开路由对所有用户开放，但按 Tier 施加不同限制（详见「商业策略」章节）：
-
-| Tier | 数据范围 | Rate Limit |
-|---|---|---|
-| Anonymous | 最近 4 周 | 10 reqs/min |
-| Free | 最近 3 个月 | 60 reqs/min |
-| Premium | 全部 | 120 reqs/min |
-| + Request Pack | 同 plan | 额外配额叠加 |
-
-超限时返回 `429`，响应体引导升级：
-
-```json
-{
-  "error": "Rate limit exceeded",
-  "code": "RATE_LIMITED",
-  "message": "Sign in or upgrade your plan for higher limits.",
-  "upgrade": "/pricing",
-  "limit": 10,
-  "reset": 1712567890
-}
-```
-
-### 需要 Session 认证
-| Method | Path | 说明 |
-|---|---|---|
-| POST | `/api/auth/login` | 登录 |
-| POST | `/api/auth/logout` | 登出 (清除 session) |
-| GET | `/api/auth/me` | 当前用户信息 |
-| POST | `/api/api-keys` | 创建 API key |
-| GET | `/api/api-keys` | 列出当前用户的 keys |
-| DELETE | `/api/api-keys/:id` | 撤销 key |
+### Tier 数据范围过滤
+- middleware 注入 `maxAge` 参数到查询上下文
+- Anonymous: `WHERE published >= date('now', '-28 days')`
+- Free: `WHERE published >= date('now', '-3 months')`
+- Premium: 无时间限制
 
 ### 需要 API Key 认证
 | Method | Path | 说明 |
@@ -260,36 +235,75 @@ interface AuthProvider {
 
 ---
 
-## 7. 搜索引擎
+## 6. 搜索引擎 — SQLite FTS5
 
-MiniSearch 内存索引，启动时从 SQLite 加载全部条目构建。
+使用 SQLite FTS5 磁盘索引，启动零开销、零额外内存。
+
+### 搜索实现
 
 ```typescript
-const miniSearch = new MiniSearch({
-  fields: ['title', 'content'],
-  storeFields: ['title', 'source', 'category', 'published'],
-  searchOptions: {
-    boost: { title: 3 },
-    fuzzy: 0.2,
-    prefix: true,
-  },
-});
+// search/fts5.ts
+import { getDb } from "../db/client";
+
+export function searchEntries(query: string, options: {
+  category?: string;
+  source?: string;
+  from?: string;
+  to?: string;
+  maxAge?: string | null;
+  limit: number;
+  offset: number;
+}) {
+  const db = getDb();
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  // FTS5 MATCH
+  conditions.push("entries_fts MATCH ?");
+  params.push(query);
+
+  // Filters via JOIN
+  if (options.category) { conditions.push("e.category = ?"); params.push(options.category); }
+  if (options.source) { conditions.push("e.source = ?"); params.push(options.source); }
+  if (options.from) { conditions.push("e.published >= ?"); params.push(options.from); }
+  if (options.to) { conditions.push("e.published <= ?"); params.push(options.to); }
+  if (options.maxAge) { conditions.push("e.published >= ?"); params.push(options.maxAge); }
+
+  const where = conditions.join(" AND ");
+
+  const rows = db.query(`
+    SELECT e.id, e.title, e.source, e.category, e.published, rank
+    FROM entries_fts
+    JOIN entries e ON e.rowid = entries_fts.rowid
+    WHERE ${where}
+    ORDER BY rank
+    LIMIT ? OFFSET ?
+  `).all(...params, options.limit, options.offset);
+
+  const total = db.query(`
+    SELECT count(*) as count
+    FROM entries_fts
+    JOIN entries e ON e.rowid = entries_fts.rowid
+    WHERE ${where}
+  `).get(...params) as { count: number };
+
+  return { rows, total: total.count };
+}
 ```
 
-### 迁移路径
-当条目超过 ~200K 时，MiniSearch 内存占用可能达 ~500MB：
-1. 切换到 SQLite FTS5（零额外依赖，bun:sqlite 原生支持）
-2. 构建 FTS5 虚拟表 + 触发器自动同步
-3. 搜索接口保持不变，仅替换 `engine.ts` 内部实现
+### 中文分词
+- 默认使用 `tokenize="unicode61"` (按 Unicode 字符边界分词)
+- 通过 `@node-rs/jieba` native addon 增强中文分词效果
+- jieba 在 Dockerfile 中需单独安装 native 依赖
 
 ---
 
-## 8. Ingestion Worker
+## 7. Ingestion Worker
 
 `@dak/ingestion-worker` 独立运行（cron 或手动触发），流程：
 
 ```
-sources.yaml          读取订阅源列表
+config/sources.yaml   读取订阅源列表
     ↓
 fetcher.ts            通过 RSSHub / 直接 RSS 抓取
     ↓
@@ -299,101 +313,73 @@ dedup.ts              content hash 去重
     ↓
 uploader.ts           POST /api/entries (带 API Key)
     ↓
-@dak/server           写入 SQLite + 更新 MiniSearch 索引
+@dak/server           写入 SQLite + FTS5 索引自动同步
+```
+
+### 包依赖
+
+```json
+{
+  "name": "@dak/ingestion-worker",
+  "dependencies": {
+    "@dak/contract": "workspace:*",
+    "rss-parser": "^3.13.0",
+    "turndown": "^7.2.0"
+  }
+}
 ```
 
 ### 配置文件
-- `sources.yaml` — 订阅源定义 (url, category, tags)
-- `categories.yaml` — 分类元数据
+- `config/sources.yaml` — 订阅源定义 (url, category, tags)
+- `config/categories.yaml` — 分类元数据
 
----
-
-## 9. 部署
-
-### Fly.io 部署架构
-
-```
-Fly.io (NRT region)
-├── Volume /data/
-│   └── dak.db              SQLite 数据库文件
-├── Litestream              sidecar 进程
-│   └── WAL → Cloudflare R2  每 ~1s 增量备份
-└── @dak/server              Hono + Bun.serve
-    └── /static/             @dak/ui 构建产物
-```
-
-### Dockerfile（多阶段构建）
-
-```dockerfile
-# Stage 1: build
-FROM oven/bun:1 AS builder
-WORKDIR /app
-COPY . .
-RUN bun install && bun run build
-
-# Stage 2: runtime
-FROM oven/bun:1-slim
-RUN apt-get update && apt-get install -y litestream && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/packages/server/dist /app
-COPY --from=builder /app/packages/server/litestream.yml /etc/litestream.yml
-CMD ["litestream", "replicate", "-exec", "bun run /app/index.js"]
-```
-
-### 环境变量
+### 环境变量（worker 特有）
 
 ```env
-# Server
-DB_PATH=/data/dak.db
-JWT_SECRET=<random-32-bytes>
-COOKIE_DOMAIN=dak.example.com
-
-# Litestream → R2
-R2_REPLICA_URL=s3://dak-backup/dak.db
-R2_ACCESS_KEY_ID=<r2-key>
-R2_SECRET_ACCESS_KEY=<r2-secret>
-R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-
-# Worker
-DAK_SERVER_URL=https://dak.example.com
+DAK_SERVER_URL=https://dak-server.fly.dev
 DAK_API_KEY=dak_xxxxxxxxxxxx
-
-# RSSHub
 RSSHUB_BASE_URL=https://rsshub.example.com
 ```
 
-### Litestream 备份
-- **原理**：监视 SQLite WAL 文件，每 ~1 秒将增量变更流式传输到 R2
-- **恢复**：`litestream restore -o /data/dak.db s3://dak-backup/dak.db`
-- **性能**：近零开销，不影响 SQLite 读写
-
 ---
 
-## 10. Monorepo 目录结构
+## 8. Monorepo 目录结构
 
-完整目录树见 `doc/REPO_LAYOUT`。关键路径：
+完整目录树见 `doc/REPO_LAYOUT`。dak 特有的关键路径：
 
 ```
 packages/
-├── contract/src/           schemas.ts, types.ts, routes.ts
+├── contract/src/           schemas.ts (Entry, Search, Feeds, Stats, Ingest)
 ├── server/src/
-│   ├── routes/             search, feeds, stats, ingest, auth
-│   ├── middleware/          session, api-key
-│   ├── auth/               password, api-key
-│   ├── search/engine.ts    MiniSearch
-│   └── db/                 schema, client, migrations
-├── ui/src/                 React SPA
-├── sdk/src/                HTTP client + wrappers
-├── cli/src/commands/       search, feeds, stats, suggest
+│   ├── routes/
+│   │   ├── search.ts       GET  /api/search (FTS5)
+│   │   ├── feeds.ts        GET  /api/feeds, /api/feeds/:id
+│   │   ├── stats.ts        GET  /api/stats
+│   │   ├── ingest.ts       POST /api/entries (api-key-protected)
+│   │   └── auth.ts         scaffold 标准 auth 路由
+│   ├── middleware/          scaffold 标准 (session, api-key, tier, error)
+│   ├── auth/               scaffold 标准 (password, api-key)
+│   ├── search/
+│   │   ├── fts5.ts         FTS5 搜索实现
+│   │   ├── interface.ts    SearchEngine 接口
+│   │   └── tokenizer.ts    jieba 分词集成
+│   └── db/client.ts        scaffold 标准 + entries 表 + FTS5
+├── ui/src/                 React SPA (Digital Curator 设计)
+├── sdk/src/                DakClient (search, getFeeds, getStats 等)
+├── cli/src/commands/       dak search, dak feeds, dak stats, dak suggest
 └── ingestion-worker/src/   fetcher, parser, dedup, uploader
 
-config/                     .env.example, rsshub/fly.toml
+config/
+├── sources.yaml            RSS 订阅源定义
+└── categories.yaml         分类元数据
+
 doc/                        architecture.drawio, REPO_LAYOUT
-skills/                     dak, dak_summary, dak_v2
+skills/                     dak, dak_summary, dak_dev
 ```
 
 ---
 
-## 11. UI 设计规范
+## 9. UI 设计规范 — Digital Curator
 
 所有 UI 实现必须遵循 `DESIGN.md`（"Digital Curator" 设计体系）。以下为开发时的关键约束摘要。
 
@@ -444,7 +430,7 @@ skills/                     dak, dak_summary, dak_v2
 
 **卡片和列表**：
 - 禁止使用分割线 → 使用垂直间距 (`8px` 倍数) 或交替背景色 (`surface` / `surface-container-low`)
-- "大案牍库" feed 使用 Block-Style 布局：日期 (`label-sm`) 在左侧空白列，标题在右侧
+- Feed 使用 Block-Style 布局：日期 (`label-sm`) 在左侧空白列，标题在右侧
 
 **按钮**：
 - Primary：`primary` 背景 + `on-primary` 文字 + 直角 + hover 时底部 2px `tertiary` 色条
@@ -452,21 +438,14 @@ skills/                     dak, dak_summary, dak_v2
 
 **输入框**：
 - 仅下划线样式，默认 `outline` 30% 透明度，focus 时 `primary` 2px 下划线
-- Label 使用 `label-md` + `on-surface-variant` 颜色
 
 **Archive Tag（Chips）**：
 - 矩形（非圆角药丸）+ `tertiary_container` 背景 + `tertiary_fixed` 文字 → 图书馆目录标签风格
 
-### 交互规范
-- 卡片 hover：背景从 `surface` 过渡到 `surface-container-lowest`（"高亮纸张"效果）
-- 所有间距遵循 8px 网格
-- 以文字标签 (`label-md`) 为主要导航方式，图标不作为主导航
-
-### Tailwind 实现提示
-在 `tailwind.config` 中将以上设计 token 映射为 Tailwind 主题变量。例如：
+### Tailwind 实现
 
 ```typescript
-// tailwind.config.ts (示意)
+// tailwind.config.ts
 export default {
   theme: {
     extend: {
@@ -488,48 +467,42 @@ export default {
         body: ['Inter', 'sans-serif'],
         label: ['Work Sans', 'sans-serif'],
       },
-      borderRadius: {
-        DEFAULT: '0px', // 全局直角
-      },
-      boxShadow: {
-        whisper: '0px 12px 32px rgba(28, 28, 24, 0.06)',
-      },
+      borderRadius: { DEFAULT: '0px' },
+      boxShadow: { whisper: '0px 12px 32px rgba(28, 28, 24, 0.06)' },
     },
   },
 };
 ```
 
-组件中使用 `rounded-none`（或依赖全局 `0px` 默认值），禁止出现 `rounded-md`、`rounded-lg` 等。
+禁止出现 `rounded-md`、`rounded-lg` 等。
 
-### 状态管理（Jotai + Zustand）
+---
 
-**核心原则**：禁止 prop drilling — 组件不接收大量 props / handler，而是直接消费 atom 或 store。
+## 10. 状态管理 — Jotai + Zustand
 
-**分工**：
+**核心原则**：禁止 prop drilling — 组件直接消费 atom 或 store。
+
+### 分工
 
 | 库 | 职责 | 示例 |
 |---|---|---|
 | **Jotai** (atoms) | 服务端数据、派生/计算状态、URL 同步状态 | 搜索结果、feed 列表、当前用户、筛选条件 |
-| **Zustand** (stores) | 纯客户端 UI 状态、跨组件共享的交互状态 | sidebar 开关、modal 可见性、表单草稿、滚动位置 |
+| **Zustand** (stores) | 纯客户端 UI 状态、跨组件共享的交互状态 | sidebar 开关、modal 可见性、表单草稿 |
 
-**Jotai 用法规范**：
+### Jotai 用法
 
 ```typescript
 // atoms/search.ts
 import { atom } from 'jotai';
-import { atomWithQuery } from 'jotai-tanstack-query'; // 或自定义 async atom
 
-// 原始 atom — URL 搜索参数
 export const searchQueryAtom = atom('');
 export const categoryFilterAtom = atom<string | null>(null);
 
-// 派生 atom — 自动跟踪依赖
 export const searchParamsAtom = atom((get) => ({
   q: get(searchQueryAtom),
   category: get(categoryFilterAtom),
 }));
 
-// 异步 atom — 服务端数据
 export const searchResultsAtom = atom(async (get) => {
   const params = get(searchParamsAtom);
   const res = await fetch(`/api/search?${new URLSearchParams(params)}`);
@@ -537,22 +510,7 @@ export const searchResultsAtom = atom(async (get) => {
 });
 ```
 
-```typescript
-// 组件直接消费 atom，无需 props
-import { useAtomValue, useSetAtom } from 'jotai';
-
-function SearchBar() {
-  const setQuery = useSetAtom(searchQueryAtom);
-  return <input onChange={(e) => setQuery(e.target.value)} />;
-}
-
-function ResultsList() {
-  const results = useAtomValue(searchResultsAtom);
-  return results.map(r => <ResultCard key={r.id} entry={r} />);
-}
-```
-
-**Zustand 用法规范**：
+### Zustand 用法
 
 ```typescript
 // stores/ui.ts
@@ -575,109 +533,66 @@ export const useUIStore = create<UIStore>((set) => ({
 }));
 ```
 
-```typescript
-// 组件通过 selector 消费，自动优化 re-render
-function Sidebar() {
-  const open = useUIStore((s) => s.sidebarOpen);
-  if (!open) return null;
-  return <nav>...</nav>;
-}
-```
+### 约束规则
 
-**约束规则**：
+1. **禁止 prop drilling** — 若一个 prop 需穿越 ≥2 层，提升为 atom 或 store
+2. **禁止在组件内定义 atom** — 所有 atom 在 `atoms/` 目录下
+3. **禁止混用** — 服务端数据用 Jotai，UI 状态用 Zustand
+4. **组件接口极简** — props 仅接收「身份标识」（如 `entryId`）
+5. **Zustand 用 selector** — `useStore(s => s.field)` 而非解构
 
-1. **禁止 prop drilling** — 若一个 prop 需要穿越 ≥2 层组件传递，必须提升为 atom 或 store
-2. **禁止在组件内定义 atom** — 所有 atom 定义在 `atoms/` 目录下的模块文件中
-3. **禁止混用** — 服务端/异步数据用 Jotai atom，纯 UI 状态用 Zustand store，不要反过来
-4. **组件接口极简** — 组件 props 仅接收该组件独有的「身份标识」（如 `entryId`），其余状态从 atom/store 读取
-5. **Zustand 使用 selector** — 始终用 `useStore(s => s.field)` 而非 `useStore()` 解构，避免无关更新触发 re-render
-
-**文件组织**：
+### 文件组织
 
 ```
 packages/ui/src/
-├── atoms/              # Jotai atoms（按领域分文件）
-│   ├── search.ts       # searchQueryAtom, searchResultsAtom, ...
-│   ├── feeds.ts        # feedsAtom, categoryAtom, ...
-│   └── auth.ts         # currentUserAtom, ...
-├── stores/             # Zustand stores（按领域分文件）
-│   └── ui.ts           # sidebar, modal, scroll 等 UI 状态
-├── components/         # 纯展示组件 + atom/store 消费
-├── pages/              # 路由页面
-└── ...
+├── atoms/              # Jotai atoms
+│   ├── search.ts
+│   ├── feeds.ts
+│   └── auth.ts
+├── stores/             # Zustand stores
+│   └── ui.ts
+├── components/
+└── pages/
 ```
 
 ---
 
-## 12. 开发约定
-
-### 命名
-- 包名：`@dak/<name>`（npm scope）
-- 文件名：kebab-case (`api-key.ts`)
-- 导出：named exports，避免 default export
-- schema：PascalCase (`SearchRequest`)，类型用 `z.infer<typeof SearchRequest>`
-
-### 错误处理
-- Hono 统一错误 middleware，返回 `{ error: string, code: string }`
-- HTTP 状态码：400 (校验), 401 (未认证), 403 (无权限), 404, 500
-
-### 测试
-- 使用 `bun:test`
-- server 路由测试通过 Hono `app.request()` 无需启动服务器
-- sdk/cli 测试 mock HTTP 层
-
-### 代码质量
-- TypeScript strict mode
-- Zod schema 做 runtime 校验（server 入口 + sdk 响应）
-- 无 ORM — 直接写 SQL prepared statements
-
----
-
-## 13. 本地开发
+## 11. 本地开发
 
 ### 启动
 
 ```bash
-# 1. 安装依赖（根目录）
+# 安装依赖
 bun install
 
-# 2. 启动 server（自动创建 SQLite DB: ./data/dak.db）
+# 启动 server
 cd packages/server && bun run dev
 # → http://localhost:3000/health
 
-# 3.（可选）启动 UI（Vite dev proxy /api → :3000）
+# 启动 UI
 cd packages/ui && bun run dev
 # → http://localhost:5173
 ```
 
 ### 创建管理员 + API Key
 
-DB 初始为空，需手动创建第一个用户：
-
 ```bash
-bun -e "
-import { Database } from 'bun:sqlite';
-const db = new Database('./data/dak.db');
-const hash = await Bun.password.hash('your-password', { algorithm: 'argon2id' });
-db.run('INSERT INTO users (id, username, password, role, plan) VALUES (?, ?, ?, ?, ?)',
-  [crypto.randomUUID(), 'admin', hash, 'admin', 'premium']);
-console.log('✅ Admin user created');
-"
-```
-
-然后通过 API 登录并创建 API Key：
-
-```bash
-# 登录
-curl -c cookies.txt -X POST http://localhost:3000/api/auth/login \
+# 注册用户（Better Auth sign-up）
+curl -c cookies.txt -X POST http://localhost:3000/api/auth/sign-up/email \
   -H 'Content-Type: application/json' \
+  -H 'Origin: http://localhost:3000' \
+  -d '{"email":"admin@dak.local","password":"your-password","name":"admin","username":"admin"}'
+
+# 登录（用户名）
+curl -c cookies.txt -X POST http://localhost:3000/api/auth/sign-in/username \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: http://localhost:3000' \
   -d '{"username":"admin","password":"your-password"}'
 
 # 创建 API Key
 curl -b cookies.txt -X POST http://localhost:3000/api/api-keys \
   -H 'Content-Type: application/json' \
   -d '{"name":"dev"}'
-# → 返回 { "key": "dak_xxx...", ... }  ← 仅此一次显示明文
 ```
 
 ### 运行 Ingestion Worker
@@ -696,38 +611,13 @@ DAK_SERVER_URL=http://localhost:3000 DAK_API_KEY=dak_xxx \
 
 ---
 
-## 14. 演进路线
+## 12. 演进路线
 
 | 阶段 | 内容 |
 |---|---|
-| **v2.0** | 6-package 拆分、SQLite + MiniSearch、自建 Auth、Litestream 备份 |
-| **v2.1** | GitHub OAuth (arctic 库)、用户角色管理 |
-| **v2.2** | 搜索引擎优化：MiniSearch → SQLite FTS5（见下方 TODO） |
-| **v2.3** | 邮件密码重置 (Resend)、多用户支持 |
-| **Future** | AuthProvider 替换 (Clerk/Auth0)、Turso (分布式 SQLite)、Worker 分布式调度、向量语义搜索 |
-
-### TODO: v2.2 搜索引擎迁移 — MiniSearch → SQLite FTS5
-
-**动机**：MiniSearch 在内存中构建索引，14K 条 title-only 索引占 364ms/~200MB，加上 content 需 6.5s/1.6GB。启动时全量 rebuild 导致 Fly.io 首次请求 502。FTS5 索引在磁盘上，启动零开销、零内存。
-
-**方案**：
-1. 创建 FTS5 虚拟表（content sync 模式，和 entries 表联动）：
-   ```sql
-   CREATE VIRTUAL TABLE entries_fts USING fts5(
-     title, content,
-     content=entries, content_rowid=rowid
-   );
-   -- 触发器自动同步插入/删除
-   ```
-2. 搜索查询改为 SQL：`SELECT ... FROM entries_fts WHERE entries_fts MATCH ? ORDER BY rank`
-3. 移除 MiniSearch 依赖，删除 `buildSearchIndex()`、`addToIndex()`
-4. category/source/date 过滤用 JOIN entries 表
-5. 中文分词：`tokenize="unicode61"` 或接 ICU 分词
-
-**基准数据**（14,456 条，本地 M 系列）：
-- MiniSearch title-only: 364ms 启动，~200MB
-- MiniSearch title+content: 6,517ms 启动，~1.6GB
-- FTS5: 0ms 启动，0MB 额外内存
-
-**注意**：FTS5 无内置 fuzzy 匹配，仅支持前缀搜索 (`inflat*`)。若需 typo tolerance 可后续考虑 Meilisearch。
+| **v2.0** ✅ | 6-package 拆分、SQLite + MiniSearch、自建 Auth、Litestream 备份 |
+| **v2.1** ✅ | 搜索引擎迁移：MiniSearch → SQLite FTS5 + jieba |
+| **v2.2** ✅ | Auth 迁移：自建 Auth → Better Auth（username 插件、内置 session、删除 password.ts/session.ts） |
+| **v2.3** | Multi-Tenant 支持、GitHub/Google OAuth（Better Auth socialProviders） |
+| **Future** | Turso (分布式 SQLite)、Worker 分布式调度、向量语义搜索 |
 ```

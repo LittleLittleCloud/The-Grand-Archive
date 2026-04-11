@@ -1,11 +1,11 @@
-import type { User } from "@dak/contract";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 export function AppBar({
   user,
   onLogout,
 }: {
-  user: User | null;
+  user: { name: string; username?: string | null; image?: string | null } | null;
   onLogout: () => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -49,22 +49,7 @@ export function AppBar({
             {i18n.language.startsWith("zh") ? "EN" : "中文"}
           </button>
           {user ? (
-            <>
-              <NavLink href="#/api-keys">{t("nav.apiKeys")}</NavLink>
-              <span
-                className="text-sm text-on-primary/60"
-                style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
-              >
-                {user.username}
-              </span>
-              <button
-                onClick={onLogout}
-                className="text-sm text-on-primary/60 hover:text-on-primary transition-colors cursor-pointer"
-                style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
-              >
-                {t("nav.signOut")}
-              </button>
-            </>
+            <ProfileMenu user={user} onLogout={onLogout} />
           ) : (
             <a
               href="#/login"
@@ -77,6 +62,113 @@ export function AppBar({
         </div>
       </div>
     </header>
+  );
+}
+
+function ProfileMenu({
+  user,
+  onLogout,
+}: {
+  user: { name: string; username?: string | null; image?: string | null };
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const displayName = user.username ?? user.name;
+  const initials = displayName.charAt(0).toUpperCase();
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 cursor-pointer group"
+      >
+        {user.image ? (
+          <img
+            src={user.image}
+            alt={displayName}
+            className="w-8 h-8 object-cover"
+            style={{ borderRadius: 0 }}
+          />
+        ) : (
+          <div
+            className="w-8 h-8 flex items-center justify-center bg-on-primary/20 text-on-primary text-sm font-bold"
+            style={{ fontFamily: "var(--font-label)" }}
+          >
+            {initials}
+          </div>
+        )}
+        <svg
+          className={`w-3 h-3 text-on-primary/60 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="square" strokeLinejoin="miter" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 mt-2 w-48 py-1 bg-surface-low text-on-surface z-50"
+          style={{ boxShadow: "var(--shadow-whisper)" }}
+        >
+          <div
+            className="px-4 py-2 text-xs text-on-surface-variant uppercase truncate"
+            style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
+          >
+            {displayName}
+          </div>
+          <div className="h-px bg-outline/15 mx-2" />
+          <DropdownLink href="#/api-keys" onClick={() => setOpen(false)}>
+            {t("nav.apiKeys")}
+          </DropdownLink>
+          <DropdownLink href="#/settings" onClick={() => setOpen(false)}>
+            {t("nav.settings", "Settings")}
+          </DropdownLink>
+          <div className="h-px bg-outline/15 mx-2" />
+          <button
+            onClick={() => { setOpen(false); onLogout(); }}
+            className="w-full text-left px-4 py-2 text-sm hover:bg-surface-high transition-colors cursor-pointer"
+            style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
+          >
+            {t("nav.signOut")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropdownLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      className="block px-4 py-2 text-sm hover:bg-surface-high transition-colors"
+      style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
+    >
+      {children}
+    </a>
   );
 }
 

@@ -10,11 +10,18 @@ import { errorHandler } from "./middleware/error";
 import { tierMiddleware } from "./middleware/tier";
 import { initDb } from "./db/client";
 import { buildSearchIndex } from "./search/engine";
+import { auth } from "./auth/better-auth";
+import { getMigrations } from "better-auth/db/migration";
 
 const app = new Hono();
 
 // Global middleware
 app.use("*", cors());
+
+// Better Auth handles /api/auth/*
+app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+
+// Tier middleware for API routes (session + API key + rate limit)
 app.use("/api/*", tierMiddleware());
 app.onError(errorHandler);
 
@@ -40,6 +47,11 @@ if (staticDir) {
 const port = parseInt(process.env.PORT ?? "3000", 10);
 
 async function main() {
+  // Better Auth creates/migrates its own tables (users, sessions, account, verification)
+  const { runMigrations } = await getMigrations(auth.options);
+  await runMigrations();
+
+  // Our business tables (entries, api_keys)
   initDb();
   await buildSearchIndex();
   console.log(`🗄️  大案牍库 server listening on port ${port}`);
