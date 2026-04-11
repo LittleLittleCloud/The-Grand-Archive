@@ -10,7 +10,7 @@ primary_region = "nrt"
   DB_PATH = "/data/dak.db"
 
 [processes]
-  app = "sh -c 'echo \"=== Restoring DB from R2 ===\"; litestream restore -v -config /etc/litestream.yml -if-db-not-exists /data/dak.db; RESTORE_EXIT=$?; echo \"=== Restore exit code: $RESTORE_EXIT ===\"; ls -la /data/ 2>&1; exec bun run /app/index.js'"
+  app = "sh -c 'litestream restore -config /etc/litestream.yml -if-db-not-exists -if-replica-exists /data/dak.db; echo \"Restore exit=$? DB: $(ls -la /data/dak.db 2>&1)\"; exec bun run /app/index.js'"
 
 [http_service]
   internal_port = 3000
