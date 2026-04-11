@@ -1,0 +1,26 @@
+# Preview deployment config — PR environments
+# DB: restored once from production R2 backup via Litestream (no ongoing replication)
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3000"
+  DB_PATH = "/data/dak.db"
+
+[processes]
+  app = "sh -c 'litestream restore -config /etc/litestream.yml -if-db-not-exists /data/dak.db || true; exec bun run /app/index.js'"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
