@@ -8,6 +8,8 @@ export function ApiKeysPage() {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     loadKeys();
@@ -37,6 +39,7 @@ export function ApiKeysPage() {
     try {
       const result = await api.createApiKey(newKeyName.trim());
       setCreatedKey(result.key);
+      setCopied(false);
       setNewKeyName("");
       await loadKeys();
     } catch (e) {
@@ -45,112 +48,183 @@ export function ApiKeysPage() {
   }
 
   async function handleDelete(id: string) {
+    setDeleting(id);
     try {
       await api.deleteApiKey(id);
       setKeys((prev) => prev.filter((k) => k.id !== id));
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setDeleting(null);
     }
   }
 
+  function handleCopy() {
+    if (!createdKey) return;
+    navigator.clipboard.writeText(createdKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">API Keys</h1>
+    <div className="min-h-screen bg-surface pt-14">
+      <main className="max-w-2xl mx-auto px-6 py-10">
+        <h1
+          className="text-3xl font-bold text-primary mb-2 tracking-tight"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          API Keys
+        </h1>
+        <p
+          className="text-on-surface-variant mb-10"
+          style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
+        >
+          MANAGE PROGRAMMATIC ACCESS TO THE ARCHIVE
+        </p>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">
+          <div
+            className="mb-6 px-4 py-3 bg-surface-high text-on-surface text-sm"
+            style={{ fontFamily: "var(--font-body)" }}
+          >
             {error}
           </div>
         )}
 
         {/* Create new key */}
-        <div className="bg-white rounded-xl border p-6 shadow-sm mb-6">
-          <h2 className="font-semibold text-gray-900 mb-3">
-            Create a new API key
-          </h2>
-          <form onSubmit={handleCreate} className="flex gap-2">
-            <input
-              type="text"
-              value={newKeyName}
-              onChange={(e) => setNewKeyName(e.target.value)}
-              placeholder="Key name (e.g. ingestion-worker)"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
-            >
-              Create
-            </button>
-          </form>
-
-          {createdKey && (
-            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm font-medium text-green-800 mb-1">
-                Key created — copy it now, it won&apos;t be shown again:
-              </p>
-              <code className="block text-sm bg-green-100 px-3 py-2 rounded font-mono break-all select-all">
-                {createdKey}
-              </code>
+        <section className="mb-10">
+          <p
+            className="text-on-surface-variant uppercase mb-3"
+            style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
+          >
+            Create a new key
+          </p>
+          <div className="bg-surface-low p-6" style={{ boxShadow: "var(--shadow-whisper)" }}>
+            <form onSubmit={handleCreate} className="flex gap-3">
+              <input
+                type="text"
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                placeholder="Key name (e.g. ingestion-worker)"
+                className="flex-1 bg-transparent border-b border-outline/30 focus:border-primary py-2 text-on-surface text-sm outline-none transition"
+                style={{ fontFamily: "var(--font-body)" }}
+              />
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(createdKey);
-                }}
-                className="mt-2 text-xs text-green-700 hover:text-green-900 underline"
+                type="submit"
+                className="px-5 py-2 bg-primary text-on-primary text-sm font-semibold uppercase tracking-widest transition hover:bg-primary-container cursor-pointer"
+                style={{ fontFamily: "var(--font-label)" }}
               >
-                Copy to clipboard
+                Create
               </button>
-            </div>
-          )}
-        </div>
+            </form>
+
+            {createdKey && (
+              <div className="mt-5 p-4 bg-surface-high">
+                <p
+                  className="text-on-surface-variant uppercase mb-2"
+                  style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.7rem" }}
+                >
+                  Copy this key now — it won&apos;t be shown again
+                </p>
+                <code
+                  className="block text-sm bg-surface-dim px-3 py-2 font-mono break-all select-all text-on-surface"
+                >
+                  {createdKey}
+                </code>
+                <button
+                  onClick={handleCopy}
+                  className="mt-2 text-secondary underline underline-offset-2 hover:text-primary transition-colors cursor-pointer"
+                  style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
+                >
+                  {copied ? "Copied" : "Copy to clipboard"}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Key list */}
-        <div className="bg-white rounded-xl border shadow-sm">
-          <div className="px-6 py-4 border-b">
-            <h2 className="font-semibold text-gray-900">Your API keys</h2>
-          </div>
-
-          {loading ? (
-            <p className="px-6 py-8 text-gray-400 text-center">Loading…</p>
-          ) : keys.length === 0 ? (
-            <p className="px-6 py-8 text-gray-400 text-center text-sm">
-              No API keys yet. Create one above.
-            </p>
-          ) : (
-            <ul className="divide-y">
-              {keys.map((k) => (
-                <li
-                  key={k.id}
-                  className="px-6 py-4 flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">
-                      {k.name}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      <span className="font-mono">{k.prefix}…</span>
-                      {" · "}
-                      Created {k.created_at.slice(0, 10)}
-                      {k.last_used && (
-                        <>
-                          {" · "}
-                          Last used {k.last_used.slice(0, 10)}
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(k.id)}
-                    className="text-sm text-red-600 hover:text-red-800 hover:bg-red-50 px-3 py-1 rounded-lg transition"
+        <section>
+          <p
+            className="text-on-surface-variant uppercase mb-3"
+            style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
+          >
+            Your keys
+          </p>
+          <div className="bg-surface-low" style={{ boxShadow: "var(--shadow-whisper)" }}>
+            {loading ? (
+              <p
+                className="px-6 py-10 text-on-surface-variant text-center text-sm"
+                style={{ fontFamily: "var(--font-body)" }}
+              >
+                Loading…
+              </p>
+            ) : keys.length === 0 ? (
+              <p
+                className="px-6 py-10 text-on-surface-variant text-center text-sm"
+                style={{ fontFamily: "var(--font-body)" }}
+              >
+                No API keys yet. Create one above.
+              </p>
+            ) : (
+              <ul>
+                {keys.map((k, i) => (
+                  <li
+                    key={k.id}
+                    className={`px-6 py-4 flex items-center justify-between transition-colors ${
+                      i % 2 === 0 ? "bg-surface-low" : "bg-surface"
+                    }`}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.backgroundColor = "var(--color-surface-container-lowest)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.backgroundColor = "")
+                    }
                   >
-                    Delete
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="font-medium text-on-surface text-sm"
+                        style={{ fontFamily: "var(--font-body)" }}
+                      >
+                        {k.name}
+                      </p>
+                      <p
+                        className="text-on-surface-variant mt-0.5"
+                        style={{
+                          fontFamily: "var(--font-label)",
+                          letterSpacing: "0.05em",
+                          fontSize: "0.7rem",
+                        }}
+                      >
+                        <span className="font-mono">{k.prefix}…</span>
+                        {" · "}
+                        Created {k.created_at.slice(0, 10)}
+                        {k.last_used && (
+                          <>
+                            {" · "}
+                            Last used {k.last_used.slice(0, 10)}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(k.id)}
+                      disabled={deleting === k.id}
+                      className="text-secondary hover:text-primary transition-colors cursor-pointer disabled:opacity-40"
+                      style={{
+                        fontFamily: "var(--font-label)",
+                        letterSpacing: "0.05em",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      {deleting === k.id ? "Deleting…" : "Delete"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
       </main>
     </div>
   );
