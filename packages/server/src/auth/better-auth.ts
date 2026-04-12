@@ -18,22 +18,24 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: EMAIL_FROM,
         to: user.email,
         subject: "Reset your password — 大案牍库",
         html: `<p>Click the link below to reset your password:</p><p><a href="${url}">${url}</a></p>`,
       });
+      if (error) console.error("Resend reset-password error:", error);
     },
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: EMAIL_FROM,
         to: user.email,
         subject: "Verify your email — 大案牍库",
         html: `<p>Click the link below to verify your email:</p><p><a href="${url}">${url}</a></p>`,
       });
+      if (error) console.error("Resend verification error:", error);
     },
   },
   socialProviders: {
