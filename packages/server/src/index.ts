@@ -20,7 +20,11 @@ const app = new Hono();
 app.use("*", cors());
 
 // Better Auth handles /api/auth/*
-app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+  const req = c.req;
+  console.log(`[auth] ${req.method} ${req.url}`);
+  return auth.handler(req.raw);
+});
 
 // Tier middleware for API routes (session + API key + rate limit)
 app.use("/api/*", tierMiddleware());

@@ -18,24 +18,38 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      const { error } = await resend.emails.send({
+      console.log(`[auth:email] Sending reset-password email to=${user.email} url=${url}`);
+      const { data, error } = await resend.emails.send({
         from: EMAIL_FROM,
         to: user.email,
         subject: "Reset your password — 大案牍库",
-        html: `<p>Click the link below to reset your password:</p><p><a href="${url}">${url}</a></p>`,
+        html: `<p>Hi ${user.name},</p><p>Click the link below to reset your password:</p><p><a href="${url}">${url}</a></p>`,
       });
-      if (error) console.error("Resend reset-password error:", error);
+      if (error) {
+        console.error("[auth:email] Resend reset-password error:", error);
+        console.log(`[auth:email] ⚠️  Reset-password link (use manually): ${url}`);
+      } else {
+        console.log("[auth:email] Reset-password email sent, id:", data?.id);
+      }
     },
   },
   emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
     sendVerificationEmail: async ({ user, url }) => {
-      const { error } = await resend.emails.send({
+      console.log(`[auth:email] Sending verification email to=${user.email} url=${url}`);
+      const { data, error } = await resend.emails.send({
         from: EMAIL_FROM,
         to: user.email,
         subject: "Verify your email — 大案牍库",
         html: `<p>Click the link below to verify your email:</p><p><a href="${url}">${url}</a></p>`,
       });
-      if (error) console.error("Resend verification error:", error);
+      if (error) {
+        console.error("[auth:email] Resend verification error:", error);
+        console.log(`[auth:email] ⚠️  Verification link (use manually): ${url}`);
+      } else {
+        console.log("[auth:email] Verification email sent, id:", data?.id);
+      }
     },
   },
   socialProviders: {

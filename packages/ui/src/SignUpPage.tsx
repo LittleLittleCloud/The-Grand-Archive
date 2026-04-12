@@ -27,6 +27,7 @@ export function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verifyEmail, setVerifyEmail] = useState(false);
+  const [existingAccount, setExistingAccount] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,6 +35,7 @@ export function SignUpPage() {
 
     setLoading(true);
     setError(null);
+    setExistingAccount(false);
     try {
       const { error: authError } = await signUp.email({
         email,
@@ -42,7 +44,12 @@ export function SignUpPage() {
         username,
       });
       if (authError) {
-        setError(authError.message ?? "Sign up failed");
+        const msg = authError.message ?? "";
+        if (authError.code === "USER_ALREADY_EXISTS" || msg.toLowerCase().includes("already exist")) {
+          setExistingAccount(true);
+        } else {
+          setError(msg || "Sign up failed");
+        }
       } else {
         setVerifyEmail(true);
       }
@@ -59,6 +66,39 @@ export function SignUpPage() {
 
   async function handleGoogle() {
     await signIn.social({ provider: "google", callbackURL: window.location.origin });
+  }
+
+  if (existingAccount) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="bg-surface-low p-8" style={{ boxShadow: "var(--shadow-whisper)" }}>
+            <h2 className="font-display text-2xl font-bold text-primary text-center mb-4 tracking-tight">
+              Account already exists
+            </h2>
+            <p className="font-body text-sm text-on-surface-variant text-center leading-relaxed">
+              An account with <span className="text-on-surface font-medium">{email}</span> already exists.
+              Please sign in instead.
+            </p>
+            <a
+              href="#/login"
+              className="mt-6 block w-full py-2.5 bg-primary text-on-primary font-label text-sm font-semibold tracking-widest uppercase text-center transition hover:bg-primary-container"
+            >
+              Sign in
+            </a>
+          </div>
+          <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
+            <button
+              type="button"
+              onClick={() => setExistingAccount(false)}
+              className="text-secondary underline underline-offset-2 hover:text-primary"
+            >
+              &larr; Try a different email
+            </button>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (verifyEmail) {

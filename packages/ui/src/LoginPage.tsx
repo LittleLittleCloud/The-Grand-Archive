@@ -25,6 +25,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,12 +33,16 @@ export function LoginPage() {
 
     setLoading(true);
     setError(null);
+    setEmailNotVerified(false);
     try {
       const { error: authError } = await signIn.username({
         username,
         password,
       });
       if (authError) {
+        if (authError.code === "EMAIL_NOT_VERIFIED" || authError.message?.toLowerCase().includes("not verified")) {
+          setEmailNotVerified(true);
+        }
         setError(authError.message ?? "Invalid username or password");
       } else {
         window.location.hash = "#/";
@@ -70,7 +75,9 @@ export function LoginPage() {
 
           {error && (
             <div className="mb-6 p-3 bg-surface-high text-on-surface text-sm">
-              {error}
+              {emailNotVerified
+                ? "Your email is not verified. We've sent a new verification link — please check your inbox."
+                : error}
             </div>
           )}
 
