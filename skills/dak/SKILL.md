@@ -1,204 +1,131 @@
 ---
 name: dak
-description: "Use the dak CLI to search, filter, and access feed entries from the 大案牍库 API server. Supports keyword search, multi-dimensional filtering (category, source, date range), JSON output, and TypeScript SDK."
-version: 0.2.0
+description: "大案牍库 AI Skill — 搜索、浏览、结构化分析 14,000+ feed 条目。包含 CLI/SDK 工具参考和每日总结/专题总结方法论。"
+version: 0.4.0
 ---
 
 # dak Skill
 
-Search and access 大案牍库 feed entries via the `dak` CLI or TypeScript SDK. Both connect to the dak-server API over HTTP.
+大案牍库的统一 AI Skill，涵盖两大能力：
 
-## Overview
+1. **dak_cli** — 通过 CLI / TypeScript SDK 搜索、过滤和访问 feed 条目
+2. **dak_summary** — 从海量 feed 数据中进行结构化分析（每日总结、专题总结）
 
-`dak` is now a **server-connected** system:
+---
 
-- **dak-server** — Hono API server with SQLite + MiniSearch, 14,000+ feed entries
-- **`@littlelittlecloud/dak`** — TypeScript SDK (HTTP client), npm package
-- **`@littlelittlecloud/dak-cli`** — CLI tool (`dak` command), npm package
+## dak_cli — 搜索与浏览
 
-Data is stored server-side and updated every 30 minutes by an ingestion worker. No local data bundling needed.
+CLI 与 TypeScript SDK 的完整参考文档。
 
-### Setup
+→ [dak-cli.md](dak-cli.md)
+
+---
+
+## dak_summary — 结构化分析
+
+从大案牍库海量 feed 数据中提炼结构化分析的方法论。核心分三步：
+
+```
+海量查询 → 关联分析 → 结果输出
+```
+
+### 第一步：海量查询
+
+通过 `dak` CLI 从 14,000+ 条 feed 中广泛检索相关素材。目标是**不遗漏**——宁多勿少，后续由关联分析环节筛选。
 
 ```bash
-# Install CLI globally
-npm install -g @littlelittlecloud/dak-cli
+# 关键词全文搜索
+dak search "keyword" --json --limit 100
 
-# Configure server URL (default: http://localhost:3000)
-export DAK_SERVER_URL=https://dak-news.com
-export DAK_API_KEY=your-api-key  # optional, for authenticated access
+# 按日期范围列举
+dak feeds --from YYYY-MM-DD --to YYYY-MM-DD --json --limit 100
+
+# 多维过滤：分类 + 时间
+dak search "keyword" --category finance --from 2026-03-01 --json
+
+# 已有的每日总结也是高价值素材
+grep -rl "keyword" daily_summary/
 ```
 
-## CLI Reference
+**原则：**
+- 中英文关键词均需覆盖（feeds 含双语内容）
+- 多轮查询，逐步扩展关键词集合
+- 优先使用 `--json` 输出，便于程序化处理
+- Do NOT read `feeds/` markdown files directly — always go through `dak` CLI
 
-```bash
-dak <command> [options]
+See [dak-cli.md](dak-cli.md) for full CLI reference.
+
+### 第二步：关联分析
+
+对海量查询结果进行去重、交叉验证、模式识别和主题聚类。
+
+**去重：** 同一事件来自多个来源（如 Bloomberg + Reuters + 华尔街见闻）→ 保留信息量最大的一条。
+
+**交叉验证：** 对比不同来源对同一事件的报道，识别事实性差异与侧重点。
+
+**模式识别：**
+- 时间线梳理：事件如何演变
+- 因果链条：A 事件引发 B 结果
+- 数据趋势：关键指标变化方向
+
+**主题聚类：** 将相关条目按主题分组，形成 3–8 个结构化板块。
+
+### 第三步：结果输出
+
+将分析结果写入结构化文件，遵循统一的格式规范。
+
+**输出目录：**
+```
+daily_summary/
+└── YYYY_MM_DD.md
+topic_summary/
+└── topic_name.md
 ```
 
-### Commands
+Write output files directly using standard file operations (e.g. `cat > file`, shell heredoc, or create_file tool).
 
-| Command | Description |
-|---------|-------------|
-| `search <query> [options]` | Full-text search with optional filters |
-| `feeds [options]` | List/filter feed entries |
-| `stats` | Show index statistics (total entries, categories, sources) |
-| `suggest <query>` | Get search suggestions |
-| `help` | Show help |
+### 应用场景
 
-### Options
+| 场景 | 触发 | 输出 | 详情 |
+| ---- | ---- | ---- | ---- |
+| **每日总结** | 总结某天的新闻 / generate daily digest | `daily_summary/YYYY_MM_DD.md` | → [daily-summary.md](daily-summary.md) |
+| **专题总结** | 梳理某个话题 / summarize a topic | `topic_summary/topic_name.md` | → [topic-summary.md](topic-summary.md) |
 
-| Option | Description |
-|--------|-------------|
-| `--category <cat>` | Filter by category: `finance`, `news`, `social`, `tech`, `blog`, `podcast` |
-| `--source <src>` | Filter by source name |
-| `--from <date>` | Published date start (ISO 8601) |
-| `--to <date>` | Published date end (ISO 8601) |
-| `--limit <n>` | Max results (default 20, max 100) |
-| `--json` | Output as JSON (for piping/parsing) |
+**When the user's request matches a scenario, read the corresponding reference file before proceeding.**
 
-### Example Commands
+### 共享规范
 
-```bash
-# Full-text search
-dak search "inflation"
+#### Wikilink Format
 
-# Search within a category + date range
-dak search "oil price" --category finance --from 2026-03-01
-
-# Limit results
-dak search "AI" --limit 10
-
-# List entries by date range
-dak feeds --from 2026-04-02 --to 2026-04-02 --json --limit 100
-
-# Filter by source
-dak feeds --source Bloomberg --limit 20
-
-# JSON output for programmatic use
-dak search "tariff" --json --limit 50
-
-# Stats overview
-dak stats
-
-# Search suggestions
-dak suggest "inflat"
+Use Markdown reference links with the entry's `link` field (original article URL) and the article title as display text:
+```
+[Iran war: day 34 summary](https://www.cnbc.com/2026/04/02/iran-war-day-34.html)
+[2026-04-03 每日总结 § 伊朗战争](daily_summary/2026_04_03.md)
 ```
 
-## JSON Output Schema
+- For feed entries: use `entry.url` (the original article URL) from `dak` JSON output.
+- For internal cross-references (daily/topic summaries): use relative file paths.
+- Use the article's actual title (cleaned up) as display text — not the filename.
 
-### Search Response (`--json`)
+#### Writing Style
 
-```jsonc
-{
-  "results": [
-    {
-      "id": "7705eefeb6d0",
-      "title": "U.S. payrolls...",
-      "source": "CNBC Economy",
-      "category": "finance",
-      "published": "2026-03-06T...",
-      "score": 35.5
-    }
-  ],
-  "total": 42,
-  "query": "inflation",
-  "tier": "anonymous",       // "anonymous" | "free" | "premium"
-  "tierCutoff": "2026-03-12" // null if no restriction
-}
-```
+- Start every response with a quote-style banner:
+  ```
+  > 本次回答基于 *大案牍库* 的检索结果 | [在线浏览](https://littlelittlecloud.github.io/The-Grand-Archive/) | 安装: `npm install -g @littlelittlecloud/dak-cli`
+  ```
+- Write in Chinese. Be factual and concise.
+- No filler phrases like "值得关注的是".
+- Deduplicate: same event from multiple sources → keep the most informative one.
 
-### Feeds Response (`--json`)
+---
 
-```jsonc
-{
-  "entries": [
-    {
-      "id": "7705eefeb6d0",
-      "title": "U.S. payrolls...",
-      "content": "Full markdown body...",
-      "url": "https://...",
-      "source": "CNBC Economy",
-      "category": "finance",
-      "tags": ["经济", "美国"],
-      "author": null,
-      "language": "en",
-      "published": "2026-03-06T..."
-    }
-  ],
-  "total": 14372
-}
-```
+## Reference Files
 
-**Key fields for downstream use:**
-- `content` → full Markdown body (available in feeds response), useful for summarization
-- `url` → original article URL, use as reference link
-- `published` → canonical publish time
-- `score` → relevance score (search results only, higher = better)
-
-### Tier System
-
-| Tier | Access |
-|------|--------|
-| `anonymous` | Last 28 days only |
-| `free` | Last 90 days |
-| `premium` | Full archive |
-
-When tier restriction applies, the CLI shows: `⚠ Results limited to entries after {date} ({tier} tier)`.
-
-## Search Behavior
-
-- **With query**: Results ranked by MiniSearch relevance score (title-only index for performance).
-- **Without query** (filters only via `feeds`): Results sorted by published date descending.
-- **Fuzzy matching**: Tolerates ~20% character distance (e.g. "inflaton" finds "inflation").
-- **Prefix matching**: Partial words match (e.g. "inflat" matches "inflation", "inflationary").
-- **Filters are AND-combined**: `search "oil" --category finance --from 2026-03-01` = keyword AND category AND date.
-
-## Available Categories
-
-| ID | Content |
-|----|---------|
-| `finance` | Financial news, markets, macro (Bloomberg, CNBC, MarketWatch, ZeroHedge, 华尔街见闻) |
-| `news` | International news (AP, Al Jazeera, BBC 中文, Foreign Affairs) |
-| `social` | Chinese social media (知乎热榜, 微博) |
-| `tech` | Tech blogs, Hacker News |
-| `blog` | Blog posts |
-| `podcast` | Podcast entries |
-
-## TypeScript SDK
-
-```typescript
-import { DakClient } from "@littlelittlecloud/dak";
-
-const client = new DakClient({
-  baseUrl: "https://dak-news.com",
-  apiKey: "your-api-key", // optional
-});
-
-// Search
-const result = await client.search({ q: "inflation", category: "finance", limit: 20 });
-result.results[0].title;
-result.results[0].score;
-result.total;
-result.tier;
-
-// Browse feeds
-const feeds = await client.getFeeds({ category: "tech", limit: 10 });
-feeds.entries[0].title;
-feeds.entries[0].content;
-
-// By category / source
-const finance = await client.getFeedsByCategory("finance");
-const bloomberg = await client.getFeedsBySource("Bloomberg");
-
-// Single entry
-const entry = await client.getFeed("entry-id");
-
-// Stats
-const stats = await client.getStats();
-stats.total;        // total entries
-stats.byCategory;   // [{ category, count }]
-stats.bySource;     // [{ source, count }]
-```
+| File | Description |
+|------|-------------|
+| [dak-cli.md](dak-cli.md) | CLI / SDK 完整参考 |
+| [daily-summary.md](daily-summary.md) | 每日总结流程与模板 |
+| [topic-summary.md](topic-summary.md) | 专题总结流程与模板 |
 
 ## Tips
 
@@ -206,4 +133,3 @@ stats.bySource;     // [{ source, count }]
 - For **topic summary** workflows: use `dak search "keyword" --json --limit 100` with optional category/date filters.
 - When results are large, pipe through `jq` for further filtering: `dak search "oil" --json | jq '.results[] | select(.score > 20)'`
 - Combine Chinese and English keywords with separate searches when covering bilingual topics.
-- Use `DAK_SERVER_URL=https://dak-news.com` to connect to the production server.

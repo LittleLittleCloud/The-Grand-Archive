@@ -31,9 +31,9 @@ export default {
   // Features
   features: {
     title: "Capabilities",
-    aiNative: "AI-Native",
+    aiNative: "AI Skills",
     aiNativeDesc:
-      "Claude Skills built in. Your agent searches, filters, and summarizes without extra setup.",
+      "Seamlessly integrates into your agent via AI Skills. Works with Claude, Clawdbot, and more — no extra setup needed.",
     fullTextSearch: "Full-Text Search",
     fullTextSearchDesc:
       "Fuzzy + prefix matching across every entry. Multi-dimensional filters by category, source, and date.",

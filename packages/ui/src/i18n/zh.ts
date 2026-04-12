@@ -31,9 +31,9 @@ export default {
   // Features
   features: {
     title: "核心能力",
-    aiNative: "AI 原生",
+    aiNative: "AI Skills",
     aiNativeDesc:
-      "内置 Claude Skills，您的 AI 代理无需额外配置即可搜索、过滤和总结。",
+      "通过 AI Skills 无缝整合到你的 Agent 中，支持 Claude、Clawdbot 等主流平台，无需额外配置。",
     fullTextSearch: "全文搜索",
     fullTextSearchDesc:
       "模糊匹配 + 前缀匹配，支持分类、来源、日期等多维度过滤。",

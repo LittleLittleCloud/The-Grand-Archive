@@ -80,12 +80,6 @@ $ dak search "inflation" --category finance
   },
 ];
 
-const STEPS_KEYS = [
-  { num: "01", titleKey: "steps.installTitle", descKey: "steps.installDesc" },
-  { num: "02", titleKey: "steps.queryTitle", descKey: "steps.queryDesc" },
-  { num: "03", titleKey: "steps.analyzeTitle", descKey: "steps.analyzeDesc" },
-];
-
 /* ─── Component ─── */
 
 export function LandingPage() {
@@ -273,7 +267,8 @@ export function LandingPage() {
       </section>
 
       {/* ═══ 5. Code Specimens ═══ */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
+      <section className="bg-surface">
+        <div className="max-w-6xl mx-auto px-6 py-20">
         <h2
           className="text-on-surface mb-8"
           style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
@@ -324,51 +319,11 @@ export function LandingPage() {
             </pre>
           </div>
         </div>
-      </section>
-
-      {/* ═══ 6. How It Works ═══ */}
-      <section className="bg-surface-low">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <h2
-            className="text-on-surface mb-12"
-            style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
-          >
-            {t("steps.title")}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {STEPS_KEYS.map((s) => (
-              <div key={s.num}>
-                <span
-                  className="block mb-3"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "3rem",
-                    fontWeight: 800,
-                    color: "var(--color-tertiary-fixed-dim)",
-                  }}
-                >
-                  {s.num}
-                </span>
-                <h3
-                  className="text-on-surface mb-2"
-                  style={{ fontFamily: "var(--font-body)", fontSize: "1.125rem", fontWeight: 600 }}
-                >
-                  {t(s.titleKey)}
-                </h3>
-                <p
-                  className="text-on-surface-variant leading-relaxed"
-                  style={{ fontFamily: "var(--font-body)", fontSize: "1rem" }}
-                >
-                  {t(s.descKey)}
-                </p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
       {/* ═══ 7. Access Tiers ═══ */}
-      <section className="bg-surface">
+      <section className="bg-surface-low">
         <div className="max-w-6xl mx-auto px-6 py-20">
           <h2
             className="text-on-surface mb-12"
@@ -499,7 +454,7 @@ export function LandingPage() {
       </section>
 
       {/* ═══ 8. Footer ═══ */}
-      <footer className="bg-surface-low">
+      <footer className="bg-surface">
         <div
           className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6"
         >
