@@ -5,6 +5,7 @@ import type {
   StatsResponse,
   ApiKey,
   ApiKeyCreateResponse,
+  FeedsStatusResponse,
 } from "@dak/contract";
 import { ROUTES } from "@dak/contract";
 
@@ -78,6 +79,8 @@ export const api = {
     request<Entry>(ROUTES.FEED_BY_ID.replace(":id", encodeURIComponent(id))),
 
   getStats: () => request<StatsResponse>(ROUTES.STATS),
+
+  getFeedsStatus: () => request<FeedsStatusResponse>(ROUTES.FEEDS_STATUS),
 
   // ─── API Keys ─────────────────────────────────────────
 

@@ -9,6 +9,7 @@ import { ResetPasswordPage } from "./ResetPasswordPage";
 import { VerifyEmailPage } from "./VerifyEmailPage";
 import { ApiKeysPage } from "./ApiKeysPage";
 import { SettingsPage } from "./SettingsPage";
+import { FeedsPage } from "./FeedsPage";
 import { AppBar } from "./AppBar";
 import { useSession, signOut } from "./auth-client";
 
@@ -55,6 +56,7 @@ export function App() {
 
   const page = (() => {
     if (hash === "#/search") return <SearchPage />;
+    if (hash === "#/feeds") return <FeedsPage />;
     if (hash === "#/api-keys") return <ApiKeysPage />;
     if (hash === "#/settings") return <SettingsPage />;
     return <LandingPage />;

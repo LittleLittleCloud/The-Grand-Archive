@@ -4,6 +4,47 @@ import { getDb } from "../db/client";
 
 export const feedsRoutes = new Hono();
 
+feedsRoutes.get("/feeds/status", (c) => {
+  const db = getDb();
+
+  const feeds = db
+    .query(
+      `SELECT
+         source,
+         category,
+         COUNT(*) as entryCount,
+         MIN(published) as earliest,
+         MAX(published) as latest,
+         MAX(created_at) as lastIngested
+       FROM entries
+       GROUP BY source
+       ORDER BY entryCount DESC`
+    )
+    .all() as {
+    source: string;
+    category: string;
+    entryCount: number;
+    earliest: string | null;
+    latest: string | null;
+    lastIngested: string | null;
+  }[];
+
+  const dailyBins = db
+    .query(
+      `SELECT
+         source,
+         date(published) as day,
+         COUNT(*) as count
+       FROM entries
+       WHERE published >= date('now', '-90 days')
+       GROUP BY source, date(published)
+       ORDER BY source, day`
+    )
+    .all() as { source: string; day: string; count: number }[];
+
+  return c.json({ feeds, dailyBins });
+});
+
 feedsRoutes.get("/feeds", (c) => {
   const parsed = FeedsRequestSchema.safeParse({
     category: c.req.query("category"),

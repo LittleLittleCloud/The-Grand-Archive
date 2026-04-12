@@ -241,7 +241,7 @@ sources:
   - name: 微博热搜
     url: "{{RSSHUB_BASE_URL}}/weibo/search/hot"
     category: social
-    enabled: false  # RSSHub 路由 503，暂时禁用
+    enabled: true
     fetch_interval: 1800
     tags: [微博, 热搜]
     description: 微博实时热搜 (via RSSHub)

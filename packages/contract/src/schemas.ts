@@ -122,6 +122,28 @@ export const ApiKeyCreateResponseSchema = z.object({
   prefix: z.string(),
 });
 
+// ─── Feed Status ────────────────────────────────────────
+
+export const FeedStatusSchema = z.object({
+  source: z.string(),
+  category: z.string(),
+  entryCount: z.number(),
+  earliest: z.string().nullable(),
+  latest: z.string().nullable(),
+  lastIngested: z.string().nullable(),
+});
+
+export const DailyBinSchema = z.object({
+  source: z.string(),
+  day: z.string(),
+  count: z.number(),
+});
+
+export const FeedsStatusResponseSchema = z.object({
+  feeds: z.array(FeedStatusSchema),
+  dailyBins: z.array(DailyBinSchema),
+});
+
 // ─── Error ──────────────────────────────────────────────
 
 export const ErrorResponseSchema = z.object({

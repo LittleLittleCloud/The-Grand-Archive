@@ -5,6 +5,7 @@ export const ROUTES = {
   SEARCH: "/api/search",
   FEEDS: "/api/feeds",
   FEED_BY_ID: "/api/feeds/:id",
+  FEEDS_STATUS: "/api/feeds/status",
   STATS: "/api/stats",
 
   // API Keys (session-protected)

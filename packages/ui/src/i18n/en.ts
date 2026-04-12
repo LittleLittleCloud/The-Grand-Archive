@@ -3,6 +3,7 @@ export default {
   nav: {
     home: "Home",
     search: "Search",
+    feeds: "Feeds",
     apiKeys: "API Keys",
     signIn: "Sign in",
     signOut: "Sign out",
@@ -97,5 +98,22 @@ export default {
   footer: {
     brand: "THE GRAND ARCHIVE",
     tagline: "THE GRAND ARCHIVE",
+  },
+
+  // Feeds
+  feeds: {
+    title: "Feed Status",
+    subtitle: "Live update status for all tracked sources over the past 90 days.",
+    loading: "Loading feed status…",
+    lastUpdated: "Last Updated",
+    dateRange: "Date Range",
+    entryCount: "Entries",
+    active: "Active",
+    stale: "Stale (>2h)",
+    minutesAgo: "{{n}}m ago",
+    hoursAgo: "{{n}}h ago",
+    daysAgo: "{{n}}d ago",
+    less: "Less",
+    more: "More",
   },
 } as const;

@@ -17,6 +17,9 @@ import type {
   ApiKeyCreateResponseSchema,
   ErrorResponseSchema,
   RateLimitErrorSchema,
+  FeedStatusSchema,
+  DailyBinSchema,
+  FeedsStatusResponseSchema,
 } from "./schemas";
 
 export type Entry = z.infer<typeof EntrySchema>;
@@ -36,3 +39,6 @@ export type ApiKey = z.infer<typeof ApiKeySchema>;
 export type ApiKeyCreateResponse = z.infer<typeof ApiKeyCreateResponseSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 export type RateLimitError = z.infer<typeof RateLimitErrorSchema>;
+export type FeedStatus = z.infer<typeof FeedStatusSchema>;
+export type DailyBin = z.infer<typeof DailyBinSchema>;
+export type FeedsStatusResponse = z.infer<typeof FeedsStatusResponseSchema>;

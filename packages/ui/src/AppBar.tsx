@@ -36,6 +36,7 @@ export function AppBar({
           <nav className="hidden sm:flex items-center gap-6">
             <NavLink href="#/">{t("nav.home")}</NavLink>
             <NavLink href="#/search">{t("nav.search")}</NavLink>
+            <NavLink href="#/feeds">{t("nav.feeds")}</NavLink>
           </nav>
         </div>
 

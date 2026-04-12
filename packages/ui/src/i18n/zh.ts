@@ -3,6 +3,7 @@ export default {
   nav: {
     home: "首页",
     search: "搜索",
+    feeds: "信息源",
     apiKeys: "API 密钥",
     signIn: "登录",
     signOut: "退出",
@@ -97,5 +98,22 @@ export default {
   footer: {
     brand: "大案牍库",
     tagline: "THE GRAND ARCHIVE",
+  },
+
+  // Feeds
+  feeds: {
+    title: "信息源状态",
+    subtitle: "过去 90 天内所有追踪源的实时更新状态。",
+    loading: "加载中…",
+    lastUpdated: "最后更新",
+    dateRange: "日期范围",
+    entryCount: "条目数",
+    active: "活跃",
+    stale: "停滞 (>2h)",
+    minutesAgo: "{{n}} 分钟前",
+    hoursAgo: "{{n}} 小时前",
+    daysAgo: "{{n}} 天前",
+    less: "少",
+    more: "多",
   },
 } as const;
