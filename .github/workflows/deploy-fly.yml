@@ -48,7 +48,7 @@ jobs:
             R2_ACCESS_KEY_ID="${{ secrets.R2_ACCESS_KEY_ID }}" \
             R2_SECRET_ACCESS_KEY="${{ secrets.R2_SECRET_ACCESS_KEY }}" \
             RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}" \
-            BETTER_AUTH_URL="https://dak-server.fly.dev" \
+            BETTER_AUTH_URL="https://dak-news.com" \
             GITHUB_CLIENT_ID="${{ secrets.OAUTH_GITHUB_CLIENT_ID }}" \
             GITHUB_CLIENT_SECRET="${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}" \
             GOOGLE_CLIENT_ID="${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}" \

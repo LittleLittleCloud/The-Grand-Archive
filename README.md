@@ -36,7 +36,7 @@ npm install @littlelittlecloud/dak
 ```typescript
 import { DakClient } from "@littlelittlecloud/dak";
 
-const client = new DakClient({ baseUrl: "https://dak-server.fly.dev" });
+const client = new DakClient({ baseUrl: "https://dak-news.com" });
 
 const result = await client.search({ q: "tariff", category: "finance", limit: 10 });
 console.log(result.results[0].title);
@@ -143,7 +143,7 @@ npm install -g @littlelittlecloud/dak-cli
 
 ## CLI Reference
 
-The CLI connects to `https://dak-server.fly.dev` by default. Set an API key to unlock premium access:
+The CLI connects to `https://dak-news.com` by default. Set an API key to unlock premium access:
 
 ```bash
 export DAK_API_KEY=your-api-key  # required for premium tier (90-day history and higher rate limits)
@@ -192,7 +192,7 @@ dak suggest "inflat"
 import { DakClient } from "@littlelittlecloud/dak";
 
 const client = new DakClient({
-  baseUrl: "https://dak-server.fly.dev",
+  baseUrl: "https://dak-news.com",
   apiKey: "your-api-key", // optional
 });
 

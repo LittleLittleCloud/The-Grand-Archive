@@ -50,7 +50,7 @@ Key findings:
     code: `import { DakClient } from "@littlelittlecloud/dak";
 
 const client = new DakClient({
-  baseUrl: "https://dak-server.fly.dev",
+  baseUrl: "https://dak-news.com",
 });
 
 const result = await client.search({

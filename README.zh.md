@@ -36,7 +36,7 @@ npm install @littlelittlecloud/dak
 ```typescript
 import { DakClient } from "@littlelittlecloud/dak";
 
-const client = new DakClient({ baseUrl: "https://dak-server.fly.dev" });
+const client = new DakClient({ baseUrl: "https://dak-news.com" });
 
 const result = await client.search({ q: "关税", category: "finance", limit: 10 });
 console.log(result.results[0].title);
@@ -144,7 +144,7 @@ npm install -g @littlelittlecloud/dak-cli
 
 ## CLI 参考
 
-CLI 默认连接 `https://dak-server.fly.dev`。设置 API Key 可解锁高级访问权限：
+CLI 默认连接 `https://dak-news.com`。设置 API Key 可解锁高级访问权限：
 
 ```bash
 export DAK_API_KEY=your-api-key  # 高级订阅必填（90 天历史数据 + 更高请求限额）
@@ -193,7 +193,7 @@ dak suggest "inflat"
 import { DakClient } from "@littlelittlecloud/dak";
 
 const client = new DakClient({
-  baseUrl: "https://dak-server.fly.dev",
+  baseUrl: "https://dak-news.com",
   apiKey: "your-api-key", // 可选
 });
 

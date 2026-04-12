@@ -25,7 +25,7 @@ Data is stored server-side and updated every 30 minutes by an ingestion worker. 
 npm install -g @littlelittlecloud/dak-cli
 
 # Configure server URL (default: http://localhost:3000)
-export DAK_SERVER_URL=https://dak-server.fly.dev
+export DAK_SERVER_URL=https://dak-news.com
 export DAK_API_KEY=your-api-key  # optional, for authenticated access
 ```
 
@@ -170,7 +170,7 @@ When tier restriction applies, the CLI shows: `⚠ Results limited to entries af
 import { DakClient } from "@littlelittlecloud/dak";
 
 const client = new DakClient({
-  baseUrl: "https://dak-server.fly.dev",
+  baseUrl: "https://dak-news.com",
   apiKey: "your-api-key", // optional
 });
 
@@ -206,4 +206,4 @@ stats.bySource;     // [{ source, count }]
 - For **topic summary** workflows: use `dak search "keyword" --json --limit 100` with optional category/date filters.
 - When results are large, pipe through `jq` for further filtering: `dak search "oil" --json | jq '.results[] | select(.score > 20)'`
 - Combine Chinese and English keywords with separate searches when covering bilingual topics.
-- Use `DAK_SERVER_URL=https://dak-server.fly.dev` to connect to the production server.
+- Use `DAK_SERVER_URL=https://dak-news.com` to connect to the production server.

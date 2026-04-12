@@ -336,7 +336,7 @@ uploader.ts           POST /api/entries (带 API Key)
 ### 环境变量（worker 特有）
 
 ```env
-DAK_SERVER_URL=https://dak-server.fly.dev
+DAK_SERVER_URL=https://dak-news.com
 DAK_API_KEY=dak_xxxxxxxxxxxx
 RSSHUB_BASE_URL=https://rsshub.example.com
 ```

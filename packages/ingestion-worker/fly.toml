@@ -5,7 +5,7 @@ primary_region = "nrt"
   dockerfile = "Dockerfile"
 
 [env]
-  DAK_SERVER_URL = "https://dak-server.fly.dev"
+  DAK_SERVER_URL = "https://dak-news.com"
   INTERVAL_MS = "1800000"
 
 # No HTTP service — this is a background worker
