@@ -1,6 +1,6 @@
 {
   "name": "@littlelittlecloud/dak",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "大案牍库 SDK — HTTP client for the Grand Archive API",
   "type": "module",
   "main": "./dist/index.cjs",

@@ -1,6 +1,6 @@
 {
   "name": "@littlelittlecloud/dak-cli",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "大案牍库 CLI — Command-line interface for the Grand Archive",
   "type": "module",
   "bin": {
