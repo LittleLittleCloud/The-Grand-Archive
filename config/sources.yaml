@@ -148,6 +148,86 @@ sources:
     tags: [经济, 美国]
     description: CNBC 经济频道
 
+  - name: CNBC Top News
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [新闻, 美国]
+    description: CNBC 美国头条新闻
+
+  - name: CNBC World News
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [新闻, 国际]
+    description: CNBC 国际新闻
+
+  - name: CNBC US News
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15837362
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [新闻, 美国]
+    description: CNBC 美国新闻
+
+  - name: CNBC Asia News
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=19832390
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [新闻, 亚洲]
+    description: CNBC 亚洲新闻
+
+  - name: CNBC Europe News
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=19794221
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [新闻, 欧洲]
+    description: CNBC 欧洲新闻
+
+  - name: CNBC Politics
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000113
+    category: news
+    enabled: true
+    fetch_interval: 1800
+    tags: [政治, 美国]
+    description: CNBC 政治新闻
+
+  - name: CNBC Investing
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839069
+    category: finance
+    enabled: true
+    fetch_interval: 1800
+    tags: [投资, 美国]
+    description: CNBC 投资频道
+
+  - name: CNBC Business
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147
+    category: finance
+    enabled: true
+    fetch_interval: 1800
+    tags: [商业, 美国]
+    description: CNBC 商业新闻
+
+  - name: CNBC Tech
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=19854910
+    category: tech
+    enabled: true
+    fetch_interval: 1800
+    tags: [科技, 美国]
+    description: CNBC 科技新闻
+
+  - name: CNBC Energy
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=19836768
+    category: finance
+    enabled: true
+    fetch_interval: 1800
+    tags: [能源, 美国]
+    description: CNBC 能源频道
+
   - name: Reuters Business
     url: https://feeds.reuters.com/reuters/businessNews
     category: finance
