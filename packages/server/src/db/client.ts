@@ -69,7 +69,10 @@ function normalizePublishedDates(db: Database) {
     )
     .all() as { id: string; published: string }[];
 
-  if (rows.length === 0) return;
+  if (rows.length === 0) {
+    console.log("✅ All published dates are already ISO 8601");
+    return;
+  }
 
   console.log(`🔧 Normalizing ${rows.length} non-ISO published dates...`);
 
