@@ -100,6 +100,38 @@ export default {
     tagline: "THE GRAND ARCHIVE",
   },
 
+  // Search
+  search: {
+    placeholder: "Search entries...",
+    button: "Search",
+    showAdvanced: "Advanced Search",
+    hideAdvanced: "Hide Advanced",
+    category: "Category",
+    allCategories: "All Categories",
+    source: "Source",
+    sourcePlaceholder: "e.g. Bloomberg, CNBC",
+    from: "From",
+    to: "To",
+    clearFilters: "Clear Filters",
+    resultsFor: "RESULTS FOR",
+    sortBy: "SORT",
+    sortRelevance: "Relevance",
+    sortNewest: "Newest First",
+    sortOldest: "Oldest First",
+    sortTitle: "Title A–Z",
+    tierNotice: "Showing results from {{date}} onward ({{tier}} tier)",
+    prev: "Prev",
+    next: "Next",
+  },
+
+  // Entry
+  entry: {
+    loading: "Loading entry…",
+    back: "Back",
+    noContent: "No content available for this entry.",
+    viewOriginal: "View Original",
+  },
+
   // Feeds
   feeds: {
     title: "Feed Status",

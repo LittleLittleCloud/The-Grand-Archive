@@ -100,6 +100,38 @@ export default {
     tagline: "THE GRAND ARCHIVE",
   },
 
+  // Search
+  search: {
+    placeholder: "搜索条目…",
+    button: "搜索",
+    showAdvanced: "高级搜索",
+    hideAdvanced: "收起高级搜索",
+    category: "分类",
+    allCategories: "全部分类",
+    source: "来源",
+    sourcePlaceholder: "例如 Bloomberg、CNBC",
+    from: "起始日期",
+    to: "截止日期",
+    clearFilters: "清除筛选",
+    resultsFor: "条结果，关键词",
+    sortBy: "排序",
+    sortRelevance: "相关度",
+    sortNewest: "最新优先",
+    sortOldest: "最早优先",
+    sortTitle: "标题 A–Z",
+    tierNotice: "显示 {{date}} 之后的结果（{{tier}} 级别）",
+    prev: "上一页",
+    next: "下一页",
+  },
+
+  // Entry
+  entry: {
+    loading: "加载中…",
+    back: "返回",
+    noContent: "该条目暂无正文内容。",
+    viewOriginal: "查看原文",
+  },
+
   // Feeds
   feeds: {
     title: "信息源状态",
