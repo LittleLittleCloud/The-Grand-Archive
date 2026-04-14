@@ -53,4 +53,38 @@ function runMigrations(db: Database) {
     CREATE INDEX IF NOT EXISTS idx_entries_published ON entries(published);
     CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(hash);
   `);
+
+  // Migration: normalize RFC-822 published dates to ISO 8601
+  normalizePublishedDates(db);
+}
+
+/**
+ * One-time migration: convert RFC-822 dates (e.g. "Wed, 08 Apr 2026 16:40:10 GMT")
+ * to ISO 8601 ("2026-04-08T16:40:10.000Z") so ORDER BY / range filters work correctly.
+ */
+function normalizePublishedDates(db: Database) {
+  const rows = db
+    .query(
+      `SELECT id, published FROM entries WHERE published NOT LIKE '____-__-%'`
+    )
+    .all() as { id: string; published: string }[];
+
+  if (rows.length === 0) return;
+
+  console.log(`🔧 Normalizing ${rows.length} non-ISO published dates...`);
+
+  const update = db.prepare(
+    `UPDATE entries SET published = ? WHERE id = ?`
+  );
+
+  const migrate = db.transaction(() => {
+    for (const row of rows) {
+      const d = new Date(row.published);
+      if (isNaN(d.getTime())) continue;
+      update.run(d.toISOString(), row.id);
+    }
+  });
+
+  migrate();
+  console.log(`✅ Normalized ${rows.length} dates to ISO 8601`);
 }

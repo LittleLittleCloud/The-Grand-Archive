@@ -3,6 +3,13 @@ import type { EntryCreate } from "@dak/contract";
 import { parseContent } from "./parser";
 import { dedupHash } from "./dedup";
 
+/** Normalize any date string (RFC-822 or ISO 8601) to ISO 8601 format. */
+export function normalizeDate(raw: string): string {
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return new Date().toISOString();
+  return d.toISOString();
+}
+
 const parser = new RSSParser({
   timeout: 30_000,
   headers: { "User-Agent": "DaAnDuKu-Ingestion/2.0" },
@@ -53,8 +60,9 @@ async function fetchSource(source: SourceConfig): Promise<EntryCreate[]> {
 
     const id = dedupHash(guid, title);
     const content = parseContent(rawContent);
-    const published =
-      item.pubDate || item.isoDate || new Date().toISOString();
+    const publishedRaw =
+      item.isoDate || item.pubDate || new Date().toISOString();
+    const published = normalizeDate(publishedRaw);
 
     entries.push({
       id,
@@ -66,10 +74,7 @@ async function fetchSource(source: SourceConfig): Promise<EntryCreate[]> {
       tags: [...source.tags],
       author: item.creator || item.author || null,
       language: "en",
-      published:
-        typeof published === "string"
-          ? published
-          : new Date(published).toISOString(),
+      published,
     });
   }
 
