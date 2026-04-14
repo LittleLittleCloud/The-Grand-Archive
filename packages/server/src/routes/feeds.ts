@@ -15,7 +15,7 @@ feedsRoutes.get("/feeds/status", (c) => {
          COUNT(*) as entryCount,
          MIN(published) as earliest,
          MAX(published) as latest,
-         MAX(created_at) as lastIngested
+         MAX(created_at) || 'Z' as lastIngested
        FROM entries
        GROUP BY source
        ORDER BY entryCount DESC`
