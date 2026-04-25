@@ -18,6 +18,21 @@ export default defineConfig({
         target: "http://localhost:3000",
         changeOrigin: true,
       },
+      "/llms.txt": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
+      "/entry/": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        bypass: (req) => {
+          // Only proxy requests that end with .md
+          if (req.url && req.url.endsWith(".md")) {
+            return undefined; // Handled by proxy
+          }
+          return req.url; // Bypass proxy and handle by Vite
+        },
+      },
       "/robots.txt": {
         target: "http://localhost:3000",
         changeOrigin: true,
