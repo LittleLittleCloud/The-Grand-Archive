@@ -15,6 +15,110 @@ seoRoutes.get("/robots.txt", (c) => {
   return c.text(body, 200, { "Content-Type": "text/plain" });
 });
 
+/* ── llms.txt ── */
+seoRoutes.get("/llms.txt", (c) => {
+  const proto = c.req.header("x-forwarded-proto") ?? (c.req.url.startsWith("https") ? "https" : "http");
+  const host = c.req.header("host") ?? "dak-news.com";
+  const base = `${proto}://${host}`;
+  const md = [
+    `# 大案牍库 (The Grand Archive)`,
+    `> A real-time news database tracking 20+ authoritative sources across finance, geopolitics, tech, and social trending.`,
+    ``,
+    `For API reference, endpoints, and how to query this database, see our Agent Integration Guide:`,
+    `[${base}/AGENTS.md](${base}/AGENTS.md)`
+  ].join("\n");
+  return c.text(md, 200, { "Content-Type": "text/plain; charset=utf-8" });
+});
+
+/* ── OpenAPI Spec for AI Actions (Custom GPTs, etc.) ── */
+seoRoutes.get("/openapi.json", (c) => {
+  const proto = c.req.header("x-forwarded-proto") ?? (c.req.url.startsWith("https") ? "https" : "http");
+  const host = c.req.header("host") ?? "dak-news.com";
+  const base = `${proto}://${host}`;
+
+  const spec = {
+    openapi: "3.0.3",
+    info: {
+      title: "大案牍库 (The Grand Archive) API",
+      description: "A real-time news database tracking authoritative sources across finance, geopolitics, tech, and social trending.",
+      version: "1.0.0"
+    },
+    servers: [{ url: base }],
+    paths: {
+      "/api/search": {
+        get: {
+          summary: "Search English and Chinese news",
+          operationId: "searchNews",
+          parameters: [
+            { name: "q", in: "query", description: "Search term", required: true, schema: { type: "string" } },
+            { name: "category", in: "query", schema: { type: "string", enum: ["finance", "news", "tech", "social"] } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 20 } }
+          ],
+          responses: {
+            "200": {
+              description: "Search results",
+              content: { "application/json": { schema: { type: "object" } } }
+            }
+          }
+        }
+      },
+      "/api/feeds": {
+        get: {
+          summary: "Get recent news entries",
+          operationId: "getRecentNews",
+          parameters: [
+            { name: "category", in: "query", schema: { type: "string", enum: ["finance", "news", "tech", "social"] } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 20 } }
+          ],
+          responses: {
+            "200": {
+              description: "News entries list",
+              content: { "application/json": { schema: { type: "object" } } }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  return c.json(spec);
+});
+
+/* ── Markdown Export for LLMs (GEO) ── */
+seoRoutes.get("/entry/:id", (c, next) => {
+  const rawId = decodeURIComponent(c.req.param("id"));
+  if (!rawId.endsWith(".md")) {
+    return next();
+  }
+  const id = rawId.slice(0, -3);
+  const db = getDb();
+  
+  const entry = db
+    .query<
+      { title: string; source: string; category: string; published: string; content: string | null; url: string },
+      [string]
+    >("SELECT title, source, category, published, content, url FROM entries WHERE id = ?")
+    .get(id);
+
+  if (!entry) {
+    return c.text("Entry not found", 404);
+  }
+
+  const md = [
+    `# ${entry.title}`,
+    ``,
+    `**Source:** ${entry.source} | **Category:** ${entry.category} | **Published:** ${entry.published}`,
+    `**Original URL:** ${entry.url}`,
+    ``,
+    entry.content || "*No content available*"
+  ].join("\n");
+
+  return c.text(md, 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    "Cache-Control": "public, max-age=3600"
+  });
+});
+
 /* ── AGENTS.md — zero-install integration guide for AI agents ── */
 const agentsHandler = (c: any) => {
   const proto = c.req.header("x-forwarded-proto") ?? (c.req.url.startsWith("https") ? "https" : "http");
@@ -338,6 +442,25 @@ export function entryMetaMiddleware(staticDir: string) {
       html = html.replace(
         /<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/,
         metaTags
+      );
+
+      const bodyContent = [
+        `<noscript>`,
+        `  <article>`,
+        `    <h1>${escapeHtml(entry.title)}</h1>`,
+        `    <div>`,
+        `      <span>来源: ${escapeHtml(entry.source)}</span> | `,
+        `      <span>分类: ${escapeHtml(entry.category)}</span> | `,
+        `      <time datetime="${entry.published}">${new Date(entry.published).toLocaleString()}</time>`,
+        `    </div>`,
+        `    <p>${escapeHtml(entry.content || "*无正文*")}</p>`,
+        `  </article>`,
+        `</noscript>`,
+      ].join("\n");
+
+      html = html.replace(
+        /<noscript>[\s\S]*?<\/noscript>/,
+        bodyContent
       );
     }
 

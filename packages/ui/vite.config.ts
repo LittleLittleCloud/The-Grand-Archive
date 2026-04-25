@@ -22,6 +22,10 @@ export default defineConfig({
         target: "http://localhost:3000",
         changeOrigin: true,
       },
+      "/openapi.json": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
       "/entry/": {
         target: "http://localhost:3000",
         changeOrigin: true,
