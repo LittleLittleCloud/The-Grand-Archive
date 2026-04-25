@@ -80,7 +80,8 @@ jobs:
             GITHUB_CLIENT_ID="${{ secrets.OAUTH_GITHUB_CLIENT_ID }}" \
             GITHUB_CLIENT_SECRET="${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}" \
             GOOGLE_CLIENT_ID="${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}" \
-            GOOGLE_CLIENT_SECRET="${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}"
+            GOOGLE_CLIENT_SECRET="${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}" \
+            INGEST_ALLOWED_USERS="${{ secrets.INGEST_ALLOWED_USERS }}"
 
       - name: Deploy preview
         run: flyctl deploy --config packages/server/fly.preview.toml --app "$APP_NAME" --remote-only

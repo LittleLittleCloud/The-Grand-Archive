@@ -7,6 +7,12 @@ import { addToIndex } from "../search/engine";
 export const ingestRoutes = new Hono();
 
 ingestRoutes.post("/entries", requireApiKey(), async (c) => {
+  const allowedUsers = (process.env.INGEST_ALLOWED_USERS ?? "").split(",").filter(Boolean);
+  const userId = c.get("userId") as string;
+  if (!allowedUsers.includes(userId)) {
+    return c.json({ error: "Forbidden", code: "INGEST_NOT_ALLOWED" }, 403);
+  }
+
   const body = await c.req.json();
   const parsed = IngestRequestSchema.safeParse(body);
 
