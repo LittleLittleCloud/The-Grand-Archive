@@ -1,8 +1,9 @@
-import { Hono } from "hono";
-import { FeedsRequestSchema } from "@dak/contract";
+import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
+import { FeedsRequestSchema, FeedsResponseSchema, EntrySchema } from "@dak/contract";
+import { z } from "zod";
 import { getDb } from "../db/client";
 
-export const feedsRoutes = new Hono();
+export const feedsRoutes = new OpenAPIHono();
 
 feedsRoutes.get("/feeds/status", (c) => {
   const db = getDb();
@@ -45,24 +46,22 @@ feedsRoutes.get("/feeds/status", (c) => {
   return c.json({ feeds, dailyBins });
 });
 
-feedsRoutes.get("/feeds", (c) => {
-  const parsed = FeedsRequestSchema.safeParse({
-    category: c.req.query("category"),
-    source: c.req.query("source"),
-    from: c.req.query("from"),
-    to: c.req.query("to"),
-    limit: c.req.query("limit"),
-    offset: c.req.query("offset"),
-  });
+const feedsListRoute = createRoute({
+  method: "get",
+  path: "/feeds",
+  summary: "Browse recent news entries",
+  description: "Browse entries with filtering by category, source, and date range. No search query required.",
+  request: { query: FeedsRequestSchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: FeedsResponseSchema } },
+      description: "News entries list",
+    },
+  },
+});
 
-  if (!parsed.success) {
-    return c.json(
-      { error: "Validation error", code: "VALIDATION_ERROR", message: parsed.error.issues.map((i) => i.message).join("; ") },
-      400
-    );
-  }
-
-  const { category, source, from, to, limit, offset } = parsed.data;
+feedsRoutes.openapi(feedsListRoute, (c) => {
+  const { category, source, from, to, limit, offset } = c.req.valid("query");
   const maxAge = c.get("maxAge") as string | null;
   const db = getDb();
 
@@ -108,20 +107,35 @@ feedsRoutes.get("/feeds", (c) => {
     tags: e.tags ? JSON.parse(e.tags as string) : [],
   }));
 
-  return c.json({ entries: parsed_entries, total });
+  return c.json({ entries: parsed_entries, total } as any, 200);
 });
 
-feedsRoutes.get("/feeds/:id", (c) => {
-  const id = c.req.param("id");
+const feedsGetRoute = createRoute({
+  method: "get",
+  path: "/feeds/{id}",
+  summary: "Get a single entry by ID",
+  request: {
+    params: z.object({ id: z.string() }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: EntrySchema } },
+      description: "Single entry",
+    },
+  },
+});
+
+feedsRoutes.openapi(feedsGetRoute, (c) => {
+  const { id } = c.req.valid("param");
   const db = getDb();
   const entry = db.query("SELECT * FROM entries WHERE id = ?").get(id) as Record<string, unknown> | null;
 
   if (!entry) {
-    return c.json({ error: "Not found", code: "NOT_FOUND" }, 404);
+    return c.json({ error: "Not found", code: "NOT_FOUND" } as any, 200);
   }
 
   return c.json({
     ...entry,
     tags: entry.tags ? JSON.parse(entry.tags as string) : [],
-  });
+  } as any, 200);
 });

@@ -31,60 +31,6 @@ seoRoutes.get("/llms.txt", (c) => {
   return c.text(md, 200, { "Content-Type": "text/plain; charset=utf-8" });
 });
 
-/* ── OpenAPI Spec for AI Actions (Custom GPTs, etc.) ── */
-seoRoutes.get("/openapi.json", (c) => {
-  const proto = c.req.header("x-forwarded-proto") ?? (c.req.url.startsWith("https") ? "https" : "http");
-  const host = c.req.header("host") ?? "dak-news.com";
-  const base = `${proto}://${host}`;
-
-  const spec = {
-    openapi: "3.0.3",
-    info: {
-      title: "大案牍库 (The Grand Archive) API",
-      description: "A real-time news database tracking authoritative sources across finance, geopolitics, tech, and social trending.",
-      version: "1.0.0"
-    },
-    servers: [{ url: base }],
-    paths: {
-      "/api/search": {
-        get: {
-          summary: "Search English and Chinese news",
-          operationId: "searchNews",
-          parameters: [
-            { name: "q", in: "query", description: "Search term", required: true, schema: { type: "string" } },
-            { name: "category", in: "query", schema: { type: "string", enum: ["finance", "news", "tech", "social"] } },
-            { name: "limit", in: "query", schema: { type: "integer", default: 20 } }
-          ],
-          responses: {
-            "200": {
-              description: "Search results",
-              content: { "application/json": { schema: { type: "object" } } }
-            }
-          }
-        }
-      },
-      "/api/feeds": {
-        get: {
-          summary: "Get recent news entries",
-          operationId: "getRecentNews",
-          parameters: [
-            { name: "category", in: "query", schema: { type: "string", enum: ["finance", "news", "tech", "social"] } },
-            { name: "limit", in: "query", schema: { type: "integer", default: 20 } }
-          ],
-          responses: {
-            "200": {
-              description: "News entries list",
-              content: { "application/json": { schema: { type: "object" } } }
-            }
-          }
-        }
-      }
-    }
-  };
-
-  return c.json(spec);
-});
-
 /* ── Swagger UI (Human-readable OpenAPI docs) ── */
 seoRoutes.get("/docs", swaggerUI({ url: "/openapi.json" }));
 

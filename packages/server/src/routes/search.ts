@@ -1,34 +1,27 @@
-import { Hono } from "hono";
-import { SearchRequestSchema } from "@dak/contract";
+import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
+import { SearchRequestSchema, SearchResponseSchema } from "@dak/contract";
 import { search } from "../search/engine";
 
-export const searchRoutes = new Hono();
+export const searchRoutes = new OpenAPIHono();
 
-searchRoutes.get("/search", (c) => {
-  const parsed = SearchRequestSchema.safeParse({
-    q: c.req.query("q"),
-    category: c.req.query("category"),
-    source: c.req.query("source"),
-    from: c.req.query("from"),
-    to: c.req.query("to"),
-    limit: c.req.query("limit"),
-    offset: c.req.query("offset"),
-  });
+const searchRoute = createRoute({
+  method: "get",
+  path: "/search",
+  summary: "Search news (English & Chinese)",
+  description: "Full-text search across all entries. Supports fuzzy and prefix matching with category, source, and date filters.",
+  request: { query: SearchRequestSchema },
+  responses: {
+    200: {
+      content: { "application/json": { schema: SearchResponseSchema } },
+      description: "Search results",
+    },
+  },
+});
 
-  if (!parsed.success) {
-    return c.json(
-      {
-        error: "Validation error",
-        code: "VALIDATION_ERROR",
-        message: parsed.error.issues.map((i) => i.message).join("; "),
-      },
-      400
-    );
-  }
-
-  const { q, category, source, from, to, limit, offset } = parsed.data;
+searchRoutes.openapi(searchRoute, (c) => {
+  const { q, category, source, from, to, limit, offset } = c.req.valid("query");
   const maxAge = c.get("maxAge") as string | null;
-  const tier = c.get("tier") as string;
+  const tier = (c.get("tier") as "anonymous" | "free" | "premium") ?? "anonymous";
 
   const result = search(q, { category, source, from, to, maxAge: maxAge ?? undefined, limit, offset });
 
@@ -38,5 +31,5 @@ searchRoutes.get("/search", (c) => {
     query: q,
     tier,
     tierCutoff: result.tierFiltered ? maxAge : null,
-  });
+  }, 200);
 });

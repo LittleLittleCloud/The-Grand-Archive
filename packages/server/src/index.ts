@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
 import { searchRoutes } from "./routes/search";
@@ -15,7 +15,7 @@ import { auth } from "./auth/better-auth";
 import { getMigrations } from "better-auth/db/migration";
 import { Database } from "bun:sqlite";
 
-const app = new Hono();
+const app = new OpenAPIHono();
 
 // Global middleware
 app.use("*", cors());
@@ -40,6 +40,21 @@ app.route("/api", authRoutes);
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));
+
+// Auto-generated OpenAPI spec from zod-openapi routes
+app.doc31("/openapi.json", (c) => {
+  const proto = c.req.header("x-forwarded-proto") ?? (c.req.url.startsWith("https") ? "https" : "http");
+  const host = c.req.header("host") ?? "dak-news.com";
+  return {
+    openapi: "3.1.0",
+    info: {
+      title: "大案牍库 (The Grand Archive) API",
+      description: "A real-time news database tracking 20+ authoritative sources across finance, geopolitics, tech, and social trending. Updated every 30 minutes.",
+      version: "1.0.0",
+    },
+    servers: [{ url: `${proto}://${host}` }],
+  };
+});
 
 // SEO routes (robots.txt, sitemap.xml) — before static file serving
 app.route("/", seoRoutes);
