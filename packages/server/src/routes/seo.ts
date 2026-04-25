@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { getDb } from "../db/client";
 import { readFileSync } from "fs";
+import { swaggerUI } from "@hono/swagger-ui";
 
 export const seoRoutes = new Hono();
 
@@ -83,6 +84,9 @@ seoRoutes.get("/openapi.json", (c) => {
 
   return c.json(spec);
 });
+
+/* ── Swagger UI (Human-readable OpenAPI docs) ── */
+seoRoutes.get("/docs", swaggerUI({ url: "/openapi.json" }));
 
 /* ── Markdown Export for LLMs (GEO) ── */
 seoRoutes.get("/entry/:id", (c, next) => {
