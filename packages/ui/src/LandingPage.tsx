@@ -172,12 +172,12 @@ export function LandingPage() {
                 style={{ background: "#f7f4ed", borderRadius: "12px", boxShadow: "0px 12px 32px rgba(28,28,24,0.12)" }}
               >
                 {/* Tabs */}
-                <div className="flex gap-0 overflow-x-auto" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch", background: "#ece8df" }}>
+                <div className="flex gap-0" style={{ background: "#ece8df" }}>
                   {CODE_TABS.map((tab, i) => (
                     <button
                       key={tab.label}
                       onClick={() => setActiveTab(i)}
-                      className="shrink-0 px-3 sm:px-4 py-2 text-xs transition-colors cursor-pointer whitespace-nowrap"
+                      className="flex-1 px-3 sm:px-4 py-2 text-xs transition-colors cursor-pointer whitespace-nowrap text-center"
                       style={{
                         fontFamily: "var(--font-label)",
                         letterSpacing: "0.05em",
