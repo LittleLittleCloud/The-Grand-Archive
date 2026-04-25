@@ -223,3 +223,16 @@ function NavLink({ href, children, external }: { href: string; children: React.R
     </a>
   );
 }
+
+function MobileNavLink({ href, onClick, children }: { href: string; onClick?: () => void; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      onClick={(e) => { handleLinkClick(e); onClick?.(); }}
+      className="block px-4 py-2.5 text-on-primary/80 hover:text-on-primary transition-colors"
+      style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.85rem" }}
+    >
+      {children}
+    </a>
+  );
+}
