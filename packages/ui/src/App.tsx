@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { LandingPage } from "./LandingPage";
 import { LoginPage } from "./LoginPage";
 import { SignUpPage } from "./SignUpPage";
@@ -12,54 +11,45 @@ import { SearchPage } from "./SearchPage";
 import { EntryPage } from "./EntryPage";
 import { AppBar } from "./AppBar";
 import { useSession, signOut } from "./auth-client";
-
-function useHash() {
-  const [hash, setHash] = useState(window.location.hash);
-  useEffect(() => {
-    const onHashChange = () => setHash(window.location.hash);
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
-  return hash;
-}
+import { usePath, navigate } from "./router";
 
 export function App() {
-  const hash = useHash();
+  const path = usePath();
   const { data: session } = useSession();
   const user = session?.user ?? null;
 
   const handleLogout = async () => {
     await signOut();
-    window.location.hash = "#/";
+    navigate("/");
     window.location.reload();
   };
 
-  if (hash === "#/login") {
+  if (path === "/login") {
     return <LoginPage />;
   }
 
-  if (hash === "#/signup") {
+  if (path === "/signup") {
     return <SignUpPage />;
   }
 
-  if (hash === "#/forgot-password") {
+  if (path === "/forgot-password") {
     return <ForgotPasswordPage />;
   }
 
-  if (hash === "#/reset-password") {
+  if (path === "/reset-password") {
     return <ResetPasswordPage />;
   }
 
-  if (hash === "#/verify-email") {
+  if (path === "/verify-email") {
     return <VerifyEmailPage />;
   }
 
   const page = (() => {
-    if (hash === "#/search") return <SearchPage />;
-    if (hash.startsWith("#/entry/")) return <EntryPage />;
-    if (hash === "#/feeds") return <FeedsPage />;
-    if (hash === "#/api-keys") return <ApiKeysPage />;
-    if (hash === "#/settings") return <SettingsPage />;
+    if (path === "/search") return <SearchPage />;
+    if (path.startsWith("/entry/")) return <EntryPage />;
+    if (path === "/feeds") return <FeedsPage />;
+    if (path === "/api-keys") return <ApiKeysPage />;
+    if (path === "/settings") return <SettingsPage />;
     return <LandingPage />;
   })();
 

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { handleLinkClick } from "./router";
 
 export function AppBar({
   user,
@@ -9,6 +10,7 @@ export function AppBar({
   onLogout: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toggleLang = () => {
     i18n.changeLanguage(i18n.language.startsWith("zh") ? "en" : "zh");
@@ -23,25 +25,26 @@ export function AppBar({
         WebkitBackdropFilter: "blur(20px)",
       }}
     >
-      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         {/* Left: brand + nav */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 sm:gap-8">
           <a
-            href="#/"
-            className="font-display text-lg font-bold text-gold hover:opacity-80 transition-opacity"
+            href="/"
+            onClick={handleLinkClick}
+            className="font-display text-base sm:text-lg font-bold text-gold hover:opacity-80 transition-opacity"
             style={{ fontFamily: "var(--font-display)" }}
           >
             THE GRAND ARCHIVE
           </a>
           <nav className="hidden sm:flex items-center gap-6">
-            <NavLink href="#/">{t("nav.home")}</NavLink>
-            <NavLink href="#/search">{t("nav.search")}</NavLink>
-            <NavLink href="#/feeds">{t("nav.feeds")}</NavLink>
+            <NavLink href="/">{t("nav.home")}</NavLink>
+            <NavLink href="/search">{t("nav.search")}</NavLink>
+            <NavLink href="/feeds">{t("nav.feeds")}</NavLink>
           </nav>
         </div>
 
-        {/* Right: lang + auth */}
-        <div className="flex items-center gap-4">
+        {/* Right: lang + auth + mobile menu button */}
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={toggleLang}
             className="text-sm text-on-primary/60 hover:text-on-primary transition-colors cursor-pointer"
@@ -53,15 +56,50 @@ export function AppBar({
             <ProfileMenu user={user} onLogout={onLogout} />
           ) : (
             <a
-              href="#/login"
-              className="px-4 py-1.5 bg-on-primary text-primary text-sm font-medium hover:bg-on-primary/90 transition-colors"
+              href="/login"
+              onClick={handleLinkClick}
+              className="hidden sm:inline-block px-4 py-1.5 bg-on-primary text-primary text-sm font-medium hover:bg-on-primary/90 transition-colors"
               style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
             >
               {t("nav.signIn")}
             </a>
           )}
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="sm:hidden text-on-primary/80 hover:text-on-primary transition-colors cursor-pointer p-1"
+            aria-label="Menu"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {mobileMenuOpen
+                ? <path strokeLinecap="square" d="M6 6l12 12M6 18L18 6" />
+                : <path strokeLinecap="square" d="M4 6h16M4 12h16M4 18h16" />}
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu dropdown */}
+      {mobileMenuOpen && (
+        <nav
+          className="sm:hidden px-4 pb-4 flex flex-col gap-3"
+          style={{ background: "rgba(4, 25, 38, 0.95)" }}
+        >
+          <MobileNavLink href="/" onClick={() => setMobileMenuOpen(false)}>{t("nav.home")}</MobileNavLink>
+          <MobileNavLink href="/search" onClick={() => setMobileMenuOpen(false)}>{t("nav.search")}</MobileNavLink>
+          <MobileNavLink href="/feeds" onClick={() => setMobileMenuOpen(false)}>{t("nav.feeds")}</MobileNavLink>
+          {!user && (
+            <a
+              href="/login"
+              onClick={(e) => { handleLinkClick(e); setMobileMenuOpen(false); }}
+              className="px-4 py-2.5 bg-on-primary text-primary text-sm font-medium text-center"
+              style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
+            >
+              {t("nav.signIn")}
+            </a>
+          )}
+        </nav>
+      )}
     </header>
   );
 }
@@ -132,10 +170,10 @@ function ProfileMenu({
             {displayName}
           </div>
           <div className="h-px bg-outline/15 mx-2" />
-          <DropdownLink href="#/api-keys" onClick={() => setOpen(false)}>
+          <DropdownLink href="/api-keys" onClick={() => setOpen(false)}>
             {t("nav.apiKeys")}
           </DropdownLink>
-          <DropdownLink href="#/settings" onClick={() => setOpen(false)}>
+          <DropdownLink href="/settings" onClick={() => setOpen(false)}>
             {t("nav.settings", "Settings")}
           </DropdownLink>
           <div className="h-px bg-outline/15 mx-2" />
@@ -164,7 +202,7 @@ function DropdownLink({
   return (
     <a
       href={href}
-      onClick={onClick}
+      onClick={(e) => { handleLinkClick(e); onClick?.(); }}
       className="block px-4 py-2 text-sm hover:bg-surface-high transition-colors"
       style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
     >
@@ -177,7 +215,7 @@ function NavLink({ href, children, external }: { href: string; children: React.R
   return (
     <a
       href={href}
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : { onClick: handleLinkClick })}
       className="text-sm text-on-primary/70 hover:text-on-primary transition-colors uppercase"
       style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
     >

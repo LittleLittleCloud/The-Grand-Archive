@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { requestPasswordReset } from "./auth-client";
+import { handleLinkClick } from "./router";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -16,7 +17,7 @@ export function ForgotPasswordPage() {
     try {
       const { error: authError } = await requestPasswordReset({
         email,
-        redirectTo: `${window.location.origin}/#/reset-password`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (authError) {
         setError(authError.message ?? "Failed to send reset email");
@@ -44,7 +45,7 @@ export function ForgotPasswordPage() {
             </p>
           </div>
           <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
-            <a href="#/login" className="text-secondary underline underline-offset-2 hover:text-primary">
+            <a href="/login" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
               &larr; Back to sign in
             </a>
           </p>
@@ -99,7 +100,7 @@ export function ForgotPasswordPage() {
         </div>
 
         <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
-          <a href="#/login" className="text-secondary underline underline-offset-2 hover:text-primary">
+          <a href="/login" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
             &larr; Back to sign in
           </a>
         </p>

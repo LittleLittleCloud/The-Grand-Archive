@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useSession, authClient } from "./auth-client";
 import { api, ApiError } from "./api";
 import type { ApiKey } from "@dak/contract";
+import { navigate } from "./router";
 
 export function SettingsPage() {
   const { data: session } = useSession();
   const user = session?.user;
 
   if (!user) {
-    window.location.hash = "#/login";
+    navigate("/login");
     return null;
   }
 
@@ -153,7 +154,7 @@ function ApiKeysSection() {
       setError(null);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
-        window.location.hash = "#/login";
+        navigate("/login");
         return;
       }
       setError((e as Error).message);

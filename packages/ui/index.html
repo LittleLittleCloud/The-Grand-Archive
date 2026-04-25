@@ -1,9 +1,50 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>大案牍库 — The Grand Archive</title>
+    <title>大案牍库 — AI 新闻聚合数据库 | The Grand Archive</title>
+    <meta name="description" content="大案牍库（The Grand Archive）是一个为 AI Agent 设计的实时新闻聚合数据库。追踪 Bloomberg、CNBC、华尔街见闻等 20+ 权威来源，覆盖财经、地缘政治、科技与社交热点，每 30 分钟自动更新。提供全文搜索、TypeScript SDK 和 CLI 工具。" />
+    <link rel="canonical" href="https://dak-news.com/" />
+    <meta name="keywords" content="AI新闻聚合,新闻数据库,AI Agent,RSS聚合,实时新闻,财经新闻,news aggregator,AI news,real-time news database,大案牍库" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="大案牍库 — AI 新闻聚合数据库" />
+    <meta property="og:description" content="为 AI Agent 设计的实时新闻聚合数据库 — 20+ 权威来源，每 30 分钟更新，支持全文搜索和 API 接入" />
+    <meta property="og:url" content="https://dak-news.com/" />
+    <meta property="og:site_name" content="大案牍库 The Grand Archive" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="大案牍库 — AI 新闻聚合数据库" />
+    <meta name="twitter:description" content="为 AI Agent 设计的实时新闻聚合数据库 — 20+ 权威来源，每 30 分钟更新" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "大案牍库",
+      "alternateName": "The Grand Archive",
+      "url": "https://dak-news.com",
+      "description": "为 AI Agent 设计的实时新闻聚合数据库，追踪 20+ 权威信息源，覆盖财经、地缘政治、科技与社交热点",
+      "applicationCategory": "NewsApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "大案牍库",
+        "url": "https://dak-news.com"
+      },
+      "keywords": "AI新闻聚合,新闻数据库,AI Agent,RSS聚合,实时新闻,news aggregator"
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,6 +54,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>大案牍库 — AI 新闻聚合数据库</h1>
+      <p>大案牍库（The Grand Archive）是一个专为 AI Agent 设计的实时新闻聚合数据库。</p>
+      <p>追踪 Bloomberg、CNBC、MarketWatch、华尔街见闻、第一财经、财新网、BBC Chinese、NYT Chinese、Al Jazeera、AP News、Hacker News 等 20+ 权威信息源。</p>
+      <p>覆盖财经宏观、地缘政治、科技动态与社交热点，每 30 分钟自动更新。</p>
+      <p>提供全文搜索 API、TypeScript SDK 和命令行工具，一行代码即可接入。</p>
+      <ul>
+        <li><a href="/search">搜索新闻 — 全文搜索</a></li>
+        <li><a href="/feeds">信息源列表</a></li>
+      </ul>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

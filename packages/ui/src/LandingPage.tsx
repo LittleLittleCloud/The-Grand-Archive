@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "./api";
 import type { StatsResponse } from "@dak/contract";
+import { handleLinkClick } from "./router";
 
 /* ─── Data ─── */
 
@@ -28,6 +29,11 @@ const FEATURES_KEYS = [
 ];
 
 const CODE_TABS = [
+  {
+    label: "Tell Your Agent",
+    code: `US-Iran war latest from dak-news,
+refer to dak-news.com/AGENTS.md for how to query`,
+  },
   {
     label: "Skill",
     code: `$ npx skills add LittleLittleCloud/The-Grand-Archive
@@ -78,6 +84,21 @@ $ dak search "inflation" --category finance
      banks as oil shock fuels inflation
      AP News · finance · 2026-03-04 · score: 7.6`,
   },
+  {
+    label: "curl",
+    code: `# Search — full-text with filters
+curl "https://dak-news.com/api/search?q=tariff&category=finance&limit=5"
+
+# Browse — recent entries by category
+curl "https://dak-news.com/api/feeds?category=tech&limit=10"
+
+# With API key (free tier, 90-day history)
+curl -H "Authorization: Bearer dak_abc123..." \\
+  "https://dak-news.com/api/search?q=inflation&from=2026-01-01"
+
+# Stats
+curl "https://dak-news.com/api/stats"`,
+  },
 ];
 
 /* ─── Component ─── */
@@ -86,6 +107,7 @@ export function LandingPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [activeTab, setActiveTab] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api.getStats().then(setStats).catch(() => {});
@@ -97,13 +119,13 @@ export function LandingPage() {
       <section
         style={{ background: "linear-gradient(135deg, #041926 0%, #1a2e3b 100%)" }}
       >
-        <div className="pt-28 pb-16 px-6">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-9 gap-12 items-start">
+        <div className="pt-20 sm:pt-28 pb-12 sm:pb-16 px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
             {/* Left — headline */}
-            <div className="lg:col-span-4">
+            <div>
               <h1
-                className="text-on-primary font-extrabold leading-tight"
-                style={{ fontFamily: "var(--font-display)", fontSize: "3.5rem" }}
+                className="text-on-primary font-extrabold leading-tight text-3xl sm:text-5xl lg:text-[3.5rem]"
+                style={{ fontFamily: "var(--font-display)" }}
               >
                 {t("hero.title1")}
                 {t("hero.title2") && <><br />{t("hero.title2")}</>}
@@ -116,7 +138,7 @@ export function LandingPage() {
               </p>
               <div className="mt-6 flex flex-wrap gap-4">
                 <a
-                  href="https://discord.gg/TODO"
+                  href="https://discord.gg/3hAm8PW5wE"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block px-6 py-3 text-on-primary font-semibold transition-colors"
@@ -144,29 +166,36 @@ export function LandingPage() {
             </div>
 
             {/* Right — code specimen */}
-            <div className="lg:col-span-4 hidden lg:block">
+            <div>
               <div
                 className="overflow-hidden"
-                style={{ background: "#f7f4ed", fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace", fontSize: "0.85rem", borderRadius: "12px", boxShadow: "0px 12px 32px rgba(28,28,24,0.12)" }}
+                style={{ background: "#f7f4ed", borderRadius: "12px", boxShadow: "0px 12px 32px rgba(28,28,24,0.12)" }}
               >
-                {/* Title bar */}
-                <div className="flex items-center gap-2.5 px-5 py-3" style={{ background: "#ece8df" }}>
-                  <span className="w-3.5 h-3.5 inline-block" style={{ background: "#ff5f57", borderRadius: "50%" }} />
-                  <span className="w-3.5 h-3.5 inline-block" style={{ background: "#febc2e", borderRadius: "50%" }} />
-                  <span className="w-3.5 h-3.5 inline-block" style={{ background: "#28c840", borderRadius: "50%" }} />
-                  <span className="ml-2 text-xs" style={{ color: "#8a8478", fontFamily: "var(--font-label)" }}>bash</span>
+                {/* Tabs */}
+                <div className="flex gap-0 overflow-x-auto" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
+                  {CODE_TABS.map((tab, i) => (
+                    <button
+                      key={tab.label}
+                      onClick={() => setActiveTab(i)}
+                      className="shrink-0 px-3 sm:px-4 py-2 text-xs transition-colors cursor-pointer"
+                      style={{
+                        fontFamily: "var(--font-label)",
+                        letterSpacing: "0.05em",
+                        background: activeTab === i ? "#f7f4ed" : "#ece8df",
+                        color: activeTab === i ? "#3b3630" : "#8a8478",
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
                 {/* Terminal body */}
                 <div className="px-5 py-5 overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
-                  <pre className="whitespace-pre leading-relaxed" style={{ color: "#3b3630" }}>
-<span style={{ color: "#6a7d45" }}>$</span>{` npx skills add LittleLittleCloud/The-Grand-Archive`}
-{`\n`}
-<span style={{ color: "#2e7d6a" }}>✓</span>{` Added skill: dak (Search & Browse)`}
-<span style={{ color: "#2e7d6a" }}>{`\n✓`}</span>{` Added skill: dak_summary (Structured Analysis)`}
-<span style={{ color: "#2e7d6a" }}>{`\n✓`}</span>{` Installed: @littlelittlecloud/dak-cli`}
-{`\n`}
-{`Done. Tell your agent:`}
-<span style={{ color: "#96622d" }}>{`\n"Search recent news about tariffs"`}</span>
+                  <pre
+                    className="whitespace-pre-wrap break-words leading-relaxed"
+                    style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace", fontSize: "0.85rem", color: "#3b3630" }}
+                  >
+                    {CODE_TABS[activeTab].code}
                   </pre>
                 </div>
               </div>
@@ -277,12 +306,12 @@ export function LandingPage() {
         </h2>
 
         {/* Tabs — archive tags */}
-        <div className="flex gap-0 mb-0">
+        <div className="flex gap-0 mb-0 overflow-x-auto" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
           {CODE_TABS.map((tab, i) => (
             <button
               key={tab.label}
               onClick={() => setActiveTab(i)}
-              className="px-5 py-2 text-sm transition-colors cursor-pointer"
+              className="shrink-0 px-4 sm:px-5 py-2 text-xs sm:text-sm transition-colors cursor-pointer"
               style={{
                 fontFamily: "var(--font-label)",
                 letterSpacing: "0.05em",
@@ -308,6 +337,17 @@ export function LandingPage() {
             <span className="ml-2 text-xs" style={{ color: "#8a8478", fontFamily: "var(--font-label)" }}>
               {CODE_TABS[activeTab].label}
             </span>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(CODE_TABS[activeTab].code);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="ml-auto text-xs px-2 py-1 transition-colors cursor-pointer hover:bg-black/5"
+              style={{ color: "#8a8478", fontFamily: "var(--font-label)" }}
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
           </div>
           {/* Terminal body */}
           <div className="px-5 py-5 overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
@@ -398,7 +438,8 @@ export function LandingPage() {
               </ul>
               <div className="mt-8">
                 <a
-                  href="#/login"
+                  href="/login"
+                  onClick={handleLinkClick}
                   className="inline-block px-5 py-2.5 bg-on-primary text-primary font-medium hover:bg-on-primary/90 transition-colors"
                   style={{ fontFamily: "var(--font-label)", fontSize: "0.8rem", letterSpacing: "0.05em" }}
                 >
@@ -474,7 +515,7 @@ export function LandingPage() {
           </div>
           <div className="flex gap-6">
             <FooterLink href="https://github.com/littlelittlecloud/The-Grand-Archive">GitHub</FooterLink>
-            <FooterLink href="https://discord.gg/TODO">Discord</FooterLink>
+            <FooterLink href="https://discord.gg/3hAm8PW5wE">Discord</FooterLink>
             <FooterLink href="https://www.npmjs.com/package/@littlelittlecloud/dak">npm SDK</FooterLink>
             <FooterLink href="https://www.npmjs.com/package/@littlelittlecloud/dak-cli">npm CLI</FooterLink>
           </div>

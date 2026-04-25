@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { resetPassword } from "./auth-client";
+import { handleLinkClick } from "./router";
 
 export function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -57,7 +58,7 @@ export function ResetPasswordPage() {
             </p>
           </div>
           <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
-            <a href="#/login" className="text-secondary underline underline-offset-2 hover:text-primary">
+            <a href="/login" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
               Sign in &rarr;
             </a>
           </p>
@@ -79,7 +80,7 @@ export function ResetPasswordPage() {
             </p>
           </div>
           <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
-            <a href="#/forgot-password" className="text-secondary underline underline-offset-2 hover:text-primary">
+            <a href="/forgot-password" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
               Request new link &rarr;
             </a>
           </p>

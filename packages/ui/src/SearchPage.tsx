@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "./api";
 import type { SearchResponse, SearchResult } from "@dak/contract";
+import { navigate } from "./router";
 
 const CATEGORIES = [
   "finance",
@@ -311,7 +312,7 @@ export function SearchPage() {
                         : "var(--color-surface-container-low)",
                   }}
                   onClick={() => {
-                    window.location.hash = `#/entry/${encodeURIComponent(r.id)}`;
+                    navigate(`/entry/${encodeURIComponent(r.id)}`);
                   }}
                 >
                   <h3

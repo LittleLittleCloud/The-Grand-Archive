@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { signUp, signIn } from "./auth-client";
+import { handleLinkClick } from "./router";
 
 function GitHubIcon() {
   return (
@@ -81,7 +82,8 @@ export function SignUpPage() {
               Please sign in instead.
             </p>
             <a
-              href="#/login"
+              href="/login"
+              onClick={handleLinkClick}
               className="mt-6 block w-full py-2.5 bg-primary text-on-primary font-label text-sm font-semibold tracking-widest uppercase text-center transition hover:bg-primary-container"
             >
               Sign in
@@ -115,7 +117,7 @@ export function SignUpPage() {
             </p>
           </div>
           <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
-            <a href="#/login" className="text-secondary underline underline-offset-2 hover:text-primary">
+            <a href="/login" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
               &larr; Back to sign in
             </a>
           </p>
@@ -229,7 +231,7 @@ export function SignUpPage() {
 
         <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
           Already have an account?{" "}
-          <a href="#/login" className="text-secondary underline underline-offset-2 hover:text-primary">
+          <a href="/login" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
             Sign in
           </a>
         </p>

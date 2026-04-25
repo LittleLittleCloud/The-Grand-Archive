@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { signIn } from "./auth-client";
+import { navigate, handleLinkClick } from "./router";
 
 function GitHubIcon() {
   return (
@@ -45,7 +46,7 @@ export function LoginPage() {
         }
         setError(authError.message ?? "Invalid username or password");
       } else {
-        window.location.hash = "#/";
+        navigate("/");
       }
     } catch (err) {
       setError((err as Error).message);
@@ -145,7 +146,8 @@ export function LoginPage() {
 
             <div className="text-right">
               <a
-                href="#/forgot-password"
+                href="/forgot-password"
+                onClick={handleLinkClick}
                 className="font-label text-xs tracking-wide text-secondary underline underline-offset-2 hover:text-primary"
               >
                 Forgot password?
@@ -164,13 +166,13 @@ export function LoginPage() {
 
         <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
           Don&apos;t have an account?{" "}
-          <a href="#/signup" className="text-secondary underline underline-offset-2 hover:text-primary">
+          <a href="/signup" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
             Sign up
           </a>
         </p>
 
         <p className="mt-2 text-center font-label text-xs tracking-wide text-on-surface-variant">
-          <a href="#/" className="text-secondary underline underline-offset-2 hover:text-primary">
+          <a href="/" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
             &larr; Back to home
           </a>
         </p>

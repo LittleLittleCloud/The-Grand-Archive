@@ -6,6 +6,7 @@ import { feedsRoutes } from "./routes/feeds";
 import { statsRoutes } from "./routes/stats";
 import { ingestRoutes } from "./routes/ingest";
 import { authRoutes } from "./routes/auth";
+import { seoRoutes, entryMetaMiddleware } from "./routes/seo";
 import { errorHandler } from "./middleware/error";
 import { tierMiddleware } from "./middleware/tier";
 import { initDb } from "./db/client";
@@ -40,9 +41,15 @@ app.route("/api", authRoutes);
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));
 
+// SEO routes (robots.txt, sitemap.xml) — before static file serving
+app.route("/", seoRoutes);
+
 // Serve UI static files in production
 const staticDir = process.env.STATIC_DIR;
 if (staticDir) {
+  // Entry pages get server-side meta injection for crawlers
+  app.route("/", entryMetaMiddleware(staticDir));
+
   app.use("/*", serveStatic({ root: staticDir + "/" }));
   // SPA fallback: serve index.html for non-API, non-file routes
   app.get("*", serveStatic({ path: staticDir + "/index.html" }));

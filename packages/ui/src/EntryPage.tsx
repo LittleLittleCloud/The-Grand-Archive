@@ -4,8 +4,8 @@ import { api } from "./api";
 import type { Entry } from "@dak/contract";
 
 function extractEntryId(): string | null {
-  const hash = window.location.hash;
-  const match = hash.match(/^#\/entry\/(.+)$/);
+  const path = window.location.pathname;
+  const match = path.match(/^\/entry\/(.+)$/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 

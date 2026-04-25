@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "./api";
 import type { ApiKey } from "@dak/contract";
+import { navigate } from "./router";
 
 export function ApiKeysPage() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
@@ -23,7 +24,7 @@ export function ApiKeysPage() {
       setError(null);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
-        window.location.hash = "#/login";
+        navigate("/login");
         return;
       }
       setError((e as Error).message);

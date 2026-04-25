@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { sendVerificationEmail } from "./auth-client";
+import { navigate, handleLinkClick } from "./router";
 
 export function VerifyEmailPage() {
   const params = new URLSearchParams(window.location.search);
@@ -14,7 +15,7 @@ export function VerifyEmailPage() {
   useEffect(() => {
     if (success) {
       // Auto-redirect after a brief pause
-      const t = setTimeout(() => { window.location.hash = "#/"; }, 2000);
+      const t = setTimeout(() => { navigate("/"); }, 2000);
       return () => clearTimeout(t);
     }
   }, [success]);
@@ -78,7 +79,7 @@ export function VerifyEmailPage() {
         </div>
 
         <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">
-          <a href="#/login" className="text-secondary underline underline-offset-2 hover:text-primary">
+          <a href="/login" onClick={handleLinkClick} className="text-secondary underline underline-offset-2 hover:text-primary">
             &larr; Back to sign in
           </a>
         </p>
