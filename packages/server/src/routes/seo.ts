@@ -298,7 +298,7 @@ export function entryMetaMiddleware(staticDir: string) {
     if (entry) {
       const title = escapeHtml(entry.title) + " — 大案牍库";
       const description = escapeHtml(
-        (entry.content ?? entry.title).slice(0, 200).replace(/\s+/g, " ")
+        (entry.content || entry.title).slice(0, 200).replace(/\s+/g, " ")
       );
       const url = `https://dak-news.com/entry/${encodeURIComponent(id)}`;
 
@@ -306,7 +306,7 @@ export function entryMetaMiddleware(staticDir: string) {
         "@context": "https://schema.org",
         "@type": "NewsArticle",
         "headline": entry.title,
-        "description": (entry.content ?? entry.title).slice(0, 200),
+        "description": (entry.content || entry.title).slice(0, 200),
         "url": `https://dak-news.com/entry/${encodeURIComponent(id)}`,
         "datePublished": entry.published,
         "publisher": {
@@ -321,10 +321,12 @@ export function entryMetaMiddleware(staticDir: string) {
       const metaTags = [
         `<title>${title}</title>`,
         `<meta name="description" content="${description}">`,
+        `<link rel="canonical" href="${url}">`,
         `<meta property="og:title" content="${title}">`,
         `<meta property="og:description" content="${description}">`,
         `<meta property="og:url" content="${url}">`,
         `<meta property="og:type" content="article">`,
+        `<meta property="og:site_name" content="大案牍库 The Grand Archive">`,
         `<meta property="article:published_time" content="${entry.published}">`,
         `<meta property="article:section" content="${escapeHtml(entry.category)}">`,
         `<meta name="twitter:card" content="summary">`,
@@ -334,7 +336,7 @@ export function entryMetaMiddleware(staticDir: string) {
       ].join("\n    ");
 
       html = html.replace(
-        /<title>[^<]*<\/title>/,
+        /<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/,
         metaTags
       );
     }
@@ -349,8 +351,16 @@ export function entryMetaMiddleware(staticDir: string) {
       `<title>搜索新闻 — 大案牍库 AI 新闻聚合</title>`,
       `<meta name="description" content="在大案牍库中全文搜索 38,000+ 条新闻。支持按分类、来源、日期过滤，覆盖财经、地缘政治、科技等领域。">`,
       `<link rel="canonical" href="https://dak-news.com/search">`,
+      `<meta property="og:title" content="搜索新闻 — 大案牍库 AI 新闻聚合">`,
+      `<meta property="og:description" content="在大案牍库中全文搜索 38,000+ 条新闻。支持按分类、来源、日期过滤，覆盖财经、地缘政治、科技等领域。">`,
+      `<meta property="og:url" content="https://dak-news.com/search">`,
+      `<meta property="og:type" content="website">`,
+      `<meta property="og:site_name" content="大案牍库 The Grand Archive">`,
+      `<meta name="twitter:card" content="summary">`,
+      `<meta name="twitter:title" content="搜索新闻 — 大案牍库">`,
+      `<meta name="twitter:description" content="在大案牍库中全文搜索 38,000+ 条新闻">`,
     ].join("\n    ");
-    html = html.replace(/<title>[^<]*<\/title>/, metaTags);
+    html = html.replace(/<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/, metaTags);
     return c.html(html);
   });
 
@@ -361,8 +371,16 @@ export function entryMetaMiddleware(staticDir: string) {
       `<title>信息源列表 — 大案牍库 AI 新闻聚合</title>`,
       `<meta name="description" content="大案牍库追踪的 20+ 权威信息源：Bloomberg、CNBC、华尔街见闻、BBC Chinese、Hacker News 等，每 30 分钟更新。">`,
       `<link rel="canonical" href="https://dak-news.com/feeds">`,
+      `<meta property="og:title" content="信息源列表 — 大案牍库 AI 新闻聚合">`,
+      `<meta property="og:description" content="大案牍库追踪的 20+ 权威信息源：Bloomberg、CNBC、华尔街见闻、BBC Chinese、Hacker News 等">`,
+      `<meta property="og:url" content="https://dak-news.com/feeds">`,
+      `<meta property="og:type" content="website">`,
+      `<meta property="og:site_name" content="大案牍库 The Grand Archive">`,
+      `<meta name="twitter:card" content="summary">`,
+      `<meta name="twitter:title" content="信息源列表 — 大案牍库">`,
+      `<meta name="twitter:description" content="大案牍库追踪的 20+ 权威信息源，每 30 分钟更新">`,
     ].join("\n    ");
-    html = html.replace(/<title>[^<]*<\/title>/, metaTags);
+    html = html.replace(/<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/, metaTags);
     return c.html(html);
   });
 
