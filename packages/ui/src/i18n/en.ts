@@ -94,6 +94,23 @@ export default {
     contactUs: "Contact us",
   },
 
+  // FAQ
+  faq: {
+    title: "Frequently Asked Questions",
+    q1: "What is The Grand Archive?",
+    a1: "The Grand Archive (大案牍库) is a real-time, RSS-based news database built for AI agents. It continuously ingests articles from 20+ authoritative sources across finance, geopolitics, technology, and social trending topics, making them searchable via a REST API, TypeScript SDK, CLI tool, or AI Skill.",
+    q2: "What news sources does it track?",
+    a2: "The archive tracks over 20 sources including Bloomberg, CNBC, MarketWatch, BBC Chinese, NYT Chinese, AP News, Al Jazeera, Foreign Affairs, Hacker News, Weibo Hot, Zhihu Hot, 华尔街见闻, 第一财经, 财新网, and more — updated every 30 minutes.",
+    q3: "Is The Grand Archive free to use?",
+    a3: "Yes. Anonymous visitors can search the last 28 days of entries without any sign-up. Creating a free account unlocks 90 days of history and API key access. A premium tier provides unlimited history and higher rate limits — contact us for details.",
+    q4: "How do I search or query the archive?",
+    a4: "You can search directly on this site, use the REST API (no key required for anonymous access), install the TypeScript SDK (@littlelittlecloud/dak), or use the CLI tool (@littlelittlecloud/dak-cli). AI agents can also access it via the published AI Skill.",
+    q5: "Can my AI agent use The Grand Archive?",
+    a5: "Yes. Run `npx skills add LittleLittleCloud/The-Grand-Archive` to add the DAK skill to your AI agent, or point your agent to https://dak-news.com/AGENTS.md for instructions. It works with Claude, Clawdbot, and any agent that supports the Skills protocol.",
+    q6: "What is the difference between the free and premium tiers?",
+    a6: "The free tier (sign-in required) gives you 90 days of search history and API key access at 60 requests per minute. The premium tier provides unlimited history, up to 120 requests per minute, and dedicated support. Anonymous access is limited to 28 days of history at 10 requests per minute.",
+  },
+
   // Footer
   footer: {
     brand: "THE GRAND ARCHIVE",

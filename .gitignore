@@ -19,6 +19,10 @@ dist/
 bun.lockb
 bun.lock
 
+# pnpm (local dev only)
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
 # Generated
 web/public/data/
 packages/server/data/

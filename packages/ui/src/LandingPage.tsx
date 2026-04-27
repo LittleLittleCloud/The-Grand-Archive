@@ -101,10 +101,19 @@ curl "https://dak-news.com/api/stats"`,
   },
 ];
 
+const FAQ_KEYS = [
+  { qKey: "faq.q1", aKey: "faq.a1" },
+  { qKey: "faq.q2", aKey: "faq.a2" },
+  { qKey: "faq.q3", aKey: "faq.a3" },
+  { qKey: "faq.q4", aKey: "faq.a4" },
+  { qKey: "faq.q5", aKey: "faq.a5" },
+  { qKey: "faq.q6", aKey: "faq.a6" },
+];
+
 /* ─── Component ─── */
 
 export function LandingPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -112,6 +121,34 @@ export function LandingPage() {
   useEffect(() => {
     api.getStats().then(setStats).catch(() => {});
   }, []);
+
+  // Inject FAQ JSON-LD schema for SEO rich results
+  useEffect(() => {
+    const faqItems = FAQ_KEYS.map((item) => ({
+      "@type": "Question",
+      name: t(item.qKey),
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: t(item.aKey),
+      },
+    }));
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqItems,
+    };
+    let script = document.getElementById("faq-schema") as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.type = "application/ld+json";
+      script.id = "faq-schema";
+      document.head.appendChild(script);
+    }
+    script.textContent = JSON.stringify(schema);
+    return () => {
+      document.getElementById("faq-schema")?.remove();
+    };
+  }, [i18n.language, t]);
 
   return (
     <div className="bg-surface">
@@ -494,7 +531,25 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ 8. Footer ═══ */}
+      {/* ═══ 8. FAQ ═══ */}
+      <section className="bg-surface" aria-labelledby="faq-heading">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h2
+            id="faq-heading"
+            className="text-on-surface mb-10"
+            style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
+          >
+            {t("faq.title")}
+          </h2>
+          <dl className="divide-y" style={{ borderColor: "var(--color-outline-variant)" }}>
+            {FAQ_KEYS.map((item) => (
+              <FaqItem key={item.qKey} question={t(item.qKey)} answer={t(item.aKey)} />
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* ═══ 9. Footer ═══ */}
       <footer className="bg-surface">
         <div
           className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6"
@@ -563,5 +618,47 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
     >
       {children}
     </a>
+  );
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  const id = question.replace(/\s+/g, "-").toLowerCase().slice(0, 40);
+  const answerId = `faq-answer-${id}`;
+  return (
+    <div>
+      <dt>
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-expanded={open}
+          aria-controls={answerId}
+          className="w-full flex justify-between items-center py-5 text-left gap-4 cursor-pointer"
+          style={{ background: "none", border: "none", outline: "none" }}
+        >
+          <span
+            className="text-on-surface"
+            style={{ fontFamily: "var(--font-body)", fontSize: "1rem", fontWeight: 600 }}
+          >
+            {question}
+          </span>
+          <span
+            className="shrink-0 text-on-surface-variant"
+            style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", lineHeight: 1, userSelect: "none" }}
+            aria-hidden="true"
+          >
+            {open ? "−" : "+"}
+          </span>
+        </button>
+      </dt>
+      <dd id={answerId} className="pb-5 -mt-1" hidden={!open}>
+        <p
+          className="text-on-surface-variant leading-relaxed"
+          style={{ fontFamily: "var(--font-body)", fontSize: "0.975rem" }}
+        >
+          {answer}
+        </p>
+      </dd>
+    </div>
   );
 }

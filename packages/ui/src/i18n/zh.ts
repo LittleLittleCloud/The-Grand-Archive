@@ -94,6 +94,23 @@ export default {
     contactUs: "联系我们",
   },
 
+  // FAQ
+  faq: {
+    title: "常见问题",
+    q1: "大案牍库是什么？",
+    a1: "大案牍库（The Grand Archive）是一个专为 AI Agent 设计的实时 RSS 新闻数据库。它持续从 20 多个权威来源抓取财经、地缘政治、科技和社交热点文章，并通过 REST API、TypeScript SDK、命令行工具或 AI Skill 提供全文检索服务。",
+    q2: "追踪哪些新闻来源？",
+    a2: "目前追踪超过 20 个来源，包括 Bloomberg、CNBC、MarketWatch、BBC Chinese、NYT Chinese、AP News、Al Jazeera、Foreign Affairs、Hacker News、微博热搜、知乎热榜、华尔街见闻、第一财经、财新网等，每 30 分钟更新一次。",
+    q3: "大案牍库是否免费使用？",
+    a3: "是的。匿名用户无需注册即可搜索最近 28 天的内容。注册免费账号后可访问 90 天历史记录并获得 API 密钥。高级套餐提供无限历史记录和更高速率限制，详情请联系我们。",
+    q4: "如何搜索或查询档案库？",
+    a4: "您可以直接在本站搜索，或使用 REST API（匿名访问无需密钥），也可以安装 TypeScript SDK（@littlelittlecloud/dak）或命令行工具（@littlelittlecloud/dak-cli）。AI Agent 还可以通过已发布的 AI Skill 接入。",
+    q5: "我的 AI Agent 能使用大案牍库吗？",
+    a5: "可以。运行 `npx skills add LittleLittleCloud/The-Grand-Archive` 即可将 DAK Skill 添加到您的 Agent，或让 Agent 参考 https://dak-news.com/AGENTS.md 中的接入说明。支持 Claude、Clawdbot 等所有兼容 Skills 协议的 Agent。",
+    q6: "免费版和高级版有什么区别？",
+    a6: "免费版（需注册）可访问 90 天历史记录，API 速率限制为每分钟 60 次。高级版提供无限历史记录、每分钟最多 120 次请求以及专属支持。匿名访问限 28 天历史，速率上限为每分钟 10 次。",
+  },
+
   // Footer
   footer: {
     brand: "大案牍库",
