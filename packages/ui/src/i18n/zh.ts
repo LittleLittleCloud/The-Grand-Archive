@@ -94,6 +94,21 @@ export default {
     contactUs: "联系我们",
   },
 
+  // FAQ
+  faq: {
+    title: "常见问题",
+    q1: "什么是大案牍库（dak-news）？",
+    a1: "大案牍库是一个专为 AI Agent 和 LLM 工作流设计的实时新闻聚合数据库。它持续采集 Bloomberg、CNBC、BBC、AP News、Hacker News 等 20+ 个权威来源的文章，并通过结构化 API 提供访问，让 AI Agent 能够搜索、过滤和引用真实新闻，避免幻觉输出。",
+    q2: "大案牍库和 Google News 等传统新闻聚合器有什么区别？",
+    a2: "传统聚合器是为人类浏览标题设计的，大案牍库是为机器设计的。每条条目都包含结构化元数据（来源、分类、日期、相关性评分），支持全文 API 搜索，可通过 TypeScript SDK、CLI 或 REST API 访问 —— 你的 AI Agent 可以用程序化方式查询新闻，而不是抓取网页。",
+    q3: "大案牍库追踪哪些新闻来源？",
+    a3: "我们追踪 20+ 个来源，覆盖四大分类：财经宏观（Bloomberg、CNBC、MarketWatch、华尔街见闻、第一财经、财新网、ZeroHedge、金十数据、雪球）、国际地缘政治（BBC Chinese、NYT Chinese、Al Jazeera、AP News、Foreign Affairs、The Diplomat、参考消息、人民网）、科技（Hacker News）和社交热点（微博热搜、知乎热榜）。新来源持续添加中。",
+    q4: "如何将大案牍库接入我的 AI Agent（Claude、Clawdbot 等）？",
+    a4: "最快的方式是将 dak-news.com/AGENTS.md 分享给你的 Agent —— 里面包含了 Agent 立即开始查询新闻所需的一切信息。如需更深度集成，可以安装 dak AI Skill（'npx skills add LittleLittleCloud/The-Grand-Archive'），使用 TypeScript SDK（@littlelittlecloud/dak）、CLI 工具（@littlelittlecloud/dak-cli），或直接调用 dak-news.com/api 的 REST API。",
+    q5: "大案牍库免费吗？",
+    a5: "是的 —— 匿名访问无需注册即可搜索最近 28 天的新闻。免费账户可延长至 90 天历史，获得更高速率限制和 API 密钥。高级方案提供无限历史记录和专属支持，适用于生产环境。",
+  },
+
   // Footer
   footer: {
     brand: "大案牍库",

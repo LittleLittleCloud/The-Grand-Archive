@@ -95,3 +95,4 @@
 | 2026-04-25 | **P1: index.html SEO meta 标签** — description, OG, Twitter Card, lang="zh", canonical | `packages/ui/index.html` |
 | 2026-04-25 | **P0: 条目页服务端 meta 注入** — /entry/:id 请求会注入动态 title + OG + Twitter 标签 | `packages/server/src/routes/seo.ts`, `index.ts` |
 | 2026-04-25 | **P2: 修复 Discord 占位链接** — 替换为 GitHub 链接，移除无效 discord.gg/TODO | `packages/ui/src/LandingPage.tsx` |
+| 2026-04-27 | **SEO/GEO: 添加 FAQ 区块** — 5 条常见问题（AI 新闻聚合器角度），中英双语 i18n，FAQPage JSON-LD 结构化数据 | `LandingPage.tsx`, `i18n/en.ts`, `i18n/zh.ts`, `index.html` |

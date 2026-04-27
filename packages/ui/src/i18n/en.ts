@@ -94,6 +94,21 @@ export default {
     contactUs: "Contact us",
   },
 
+  // FAQ
+  faq: {
+    title: "Frequently Asked Questions",
+    q1: "What is dak-news (The Grand Archive)?",
+    a1: "dak-news is a real-time news aggregation database purpose-built for AI agents and LLM workflows. It continuously ingests articles from 20+ authoritative sources — Bloomberg, CNBC, BBC, AP News, Hacker News, and more — and exposes them through a structured API so that AI agents can search, filter, and cite real news without hallucinating.",
+    q2: "How is dak-news different from Google News or other news aggregators?",
+    a2: "Traditional aggregators are designed for humans browsing headlines. dak-news is designed for machines. Every entry is structured with metadata (source, category, date, relevance score), searchable via full-text API, and accessible through a TypeScript SDK, CLI, or plain REST — so your AI agent can query the news programmatically instead of scraping web pages.",
+    q3: "Which news sources does dak-news track?",
+    a3: "We track 20+ sources across four categories: Finance & Macro (Bloomberg, CNBC, MarketWatch, 华尔街见闻, 第一财经, 财新网, ZeroHedge, 金十数据, 雪球), International & Geopolitics (BBC Chinese, NYT Chinese, Al Jazeera, AP News, Foreign Affairs, The Diplomat, 参考消息, 人民网), Tech (Hacker News), and Social Trending (Weibo Hot, Zhihu Hot). New sources are added regularly.",
+    q4: "How do I connect dak-news to my AI agent (Claude, Clawdbot, etc.)?",
+    a4: "The fastest way is to share dak-news.com/AGENTS.md with your agent — it contains everything the agent needs to start querying news immediately. For deeper integration, you can install the dak AI Skill ('npx skills add LittleLittleCloud/The-Grand-Archive'), use the TypeScript SDK (@littlelittlecloud/dak), the CLI tool (@littlelittlecloud/dak-cli), or call the REST API directly at dak-news.com/api.",
+    q5: "Is dak-news free to use?",
+    a5: "Yes — anonymous access gives you 28 days of search history with no sign-up required. A free account extends that to 90 days with higher rate limits and API key access. Premium plans offer unlimited history and dedicated support for production workloads.",
+  },
+
   // Footer
   footer: {
     brand: "THE GRAND ARCHIVE",

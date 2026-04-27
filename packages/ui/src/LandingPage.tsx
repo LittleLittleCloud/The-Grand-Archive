@@ -1,8 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "./api";
 import type { StatsResponse } from "@dak/contract";
 import { handleLinkClick } from "./router";
+
+const FAQ_KEYS = [
+  { qKey: "faq.q1", aKey: "faq.a1" },
+  { qKey: "faq.q2", aKey: "faq.a2" },
+  { qKey: "faq.q3", aKey: "faq.a3" },
+  { qKey: "faq.q4", aKey: "faq.a4" },
+  { qKey: "faq.q5", aKey: "faq.a5" },
+];
 
 /* ─── Data ─── */
 
@@ -494,6 +502,23 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ═══ FAQ ═══ */}
+      <section className="bg-surface">
+        <div className="max-w-3xl mx-auto px-6 py-20">
+          <h2
+            className="text-on-surface mb-12"
+            style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 700 }}
+          >
+            {t("faq.title")}
+          </h2>
+          <div className="space-y-0 divide-y divide-outline-variant/30">
+            {FAQ_KEYS.map((f) => (
+              <FaqItem key={f.qKey} question={t(f.qKey)} answer={t(f.aKey)} />
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══ 8. Footer ═══ */}
       <footer className="bg-surface">
         <div
@@ -563,5 +588,44 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
     >
       {children}
     </a>
+  );
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  const toggle = useCallback(() => setOpen((o) => !o), []);
+
+  return (
+    <details
+      className="group"
+      open={open}
+      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+    >
+      <summary
+        onClick={(e) => { e.preventDefault(); toggle(); }}
+        className="flex items-center justify-between py-5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden"
+      >
+        <span
+          className="text-on-surface pr-4"
+          style={{ fontFamily: "var(--font-body)", fontSize: "1.05rem", fontWeight: 600 }}
+        >
+          {question}
+        </span>
+        <span
+          className="shrink-0 text-on-surface-variant transition-transform duration-200"
+          style={{ transform: open ? "rotate(45deg)" : "rotate(0deg)" }}
+        >
+          +
+        </span>
+      </summary>
+      <div className="pb-5">
+        <p
+          className="text-on-surface-variant leading-relaxed"
+          style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem" }}
+        >
+          {answer}
+        </p>
+      </div>
+    </details>
   );
 }
