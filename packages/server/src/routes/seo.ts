@@ -9,7 +9,7 @@ export const seoRoutes = new Hono();
 seoRoutes.get("/robots.txt", (c) => {
   const body = [
     "User-agent: *",
-    "Allow: /",
+    "Disallow: /entry/",
     "",
     "Sitemap: https://dak-news.com/sitemap.xml",
   ].join("\n");
@@ -280,8 +280,6 @@ seoRoutes.get("/agents.md", agentsHandler);
 
 /* ── sitemap.xml ── */
 seoRoutes.get("/sitemap.xml", (c) => {
-  const db = getDb();
-
   // Static pages
   const staticPages = [
     { loc: "/", priority: "1.0", changefreq: "hourly" },
@@ -289,21 +287,11 @@ seoRoutes.get("/sitemap.xml", (c) => {
     { loc: "/feeds", priority: "0.8", changefreq: "daily" },
   ];
 
-  // Entry pages — most recent 5000 entries (sitemap size limit)
-  const entries = db
-    .query<{ id: string; published: string }, []>(
-      `SELECT id, published FROM entries ORDER BY published DESC LIMIT 5000`
-    )
-    .all();
-
+  // Static pages only — /entry/* pages are noindex and excluded from sitemap
   const urls = [
     ...staticPages.map(
       (p) =>
         `  <url><loc>https://dak-news.com${p.loc}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`
-    ),
-    ...entries.map(
-      (e: { id: string; published: string }) =>
-        `  <url><loc>https://dak-news.com/entry/${encodeURIComponent(e.id)}</loc><lastmod>${e.published.slice(0, 10)}</lastmod><changefreq>never</changefreq><priority>0.6</priority></url>`
     ),
   ];
 
@@ -374,6 +362,7 @@ export function entryMetaMiddleware(staticDir: string) {
 
       const metaTags = [
         `<title>${title}</title>`,
+        `<meta name="robots" content="noindex, nofollow">`,
         `<meta name="description" content="${description}">`,
         `<link rel="canonical" href="${url}">`,
         `<meta property="og:title" content="${title}">`,
