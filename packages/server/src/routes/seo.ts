@@ -9,6 +9,7 @@ export const seoRoutes = new Hono();
 seoRoutes.get("/robots.txt", (c) => {
   const body = [
     "User-agent: *",
+    "Allow: /",
     "Disallow: /entry/",
     "",
     "Sitemap: https://dak-news.com/sitemap.xml",
