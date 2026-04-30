@@ -286,6 +286,7 @@ seoRoutes.get("/sitemap.xml", (c) => {
     { loc: "/", priority: "1.0", changefreq: "hourly" },
     { loc: "/search", priority: "0.9", changefreq: "hourly" },
     { loc: "/feeds", priority: "0.8", changefreq: "daily" },
+    { loc: "/AGENTS.md", priority: "0.5", changefreq: "monthly" },
   ];
 
   // Static pages only — /entry/* pages are noindex and excluded from sitemap
