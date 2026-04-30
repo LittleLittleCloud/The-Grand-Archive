@@ -118,15 +118,20 @@ async function main() {
 
   // Our business tables (entries, api_keys)
   initDb();
-  await buildSearchIndex();
 
-  // Start serving only after all migrations complete (avoids race with BA table renames)
+  // Start serving after migrations complete. The FTS index can take minutes on a
+  // restored production database, so build it in the background to keep health,
+  // stats, feeds, and auth available during cold starts.
   Bun.serve({
     port,
     hostname: "0.0.0.0",
     fetch: app.fetch,
   });
   console.log(`🗄️  大案牍库 server listening on port ${port}`);
+
+  buildSearchIndex().catch((err) => {
+    console.error("Failed to build search index", err);
+  });
 }
 
 main();

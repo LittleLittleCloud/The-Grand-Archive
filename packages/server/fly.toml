@@ -4,9 +4,15 @@ primary_region = "nrt"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  strategy = "immediate"
+
 [env]
   PORT = "3000"
   DB_PATH = "/data/dak.db"
+
+[processes]
+  app = "sh -c 'litestream restore -config /etc/litestream.yml -if-db-not-exists -if-replica-exists /data/dak.db || true; exec litestream replicate -exec \"bun run /app/index.js\"'"
 
 [http_service]
   internal_port = 3000

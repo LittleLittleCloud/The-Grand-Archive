@@ -30,3 +30,8 @@ packages/server/data/
 # Temp
 *.tmp
 *.bak
+
+# Local SQLite backups
+*.db
+*.db-shm
+*.db-wal
