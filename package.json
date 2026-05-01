@@ -2,6 +2,10 @@
   "name": "大案牍库",
   "type": "module",
   "private": true,
+  "scripts": {
+    "predeploy:server": "bun run scripts/check-fly-single-machine.ts",
+    "deploy:server": "bun run predeploy:server && fly deploy --config packages/server/fly.toml"
+  },
   "workspaces": [
     "packages/*"
   ],

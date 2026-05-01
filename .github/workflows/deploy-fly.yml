@@ -42,6 +42,14 @@ jobs:
       - name: Setup Fly
         uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Pre-deploy single-writer guard
+        run: bun run scripts/check-fly-single-machine.ts --app dak-server --volume dak_data
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       # ✅ NEW: stop machine BEFORE deploy
       - name: Stop existing machine (avoid volume lock / restart race)
         run: |

@@ -73,13 +73,14 @@ Code and config changes in this branch:
 - Production boot command now runs `litestream restore -if-db-not-exists -if-replica-exists /data/dak.db` before starting replication and the app.
 - Server startup now binds HTTP after migrations and builds the FTS5 index in the background, keeping health, stats, feeds, and auth available during cold starts.
 - `.gitignore` now excludes root-level SQLite backup files: `*.db`, `*.db-shm`, and `*.db-wal`.
+- `scripts/check-fly-single-machine.ts` now provides a pre-deploy guard. It fails deployment unless `dak-server` has exactly one Fly machine and one attached `dak_data` volume.
 
 ## Prevention
 
 Recommended follow-ups:
 
 1. Keep production SQLite as a single-writer Fly.io app with exactly one machine and one attached volume unless the data layer is changed.
-2. Before any deploy, confirm `fly machines list -a dak-server` and `fly volumes list -a dak-server` show the intended single production machine and volume.
+2. Before any deploy, run `bun run predeploy:server` or rely on the GitHub Actions pre-deploy guard to confirm `dak-server` has exactly one production machine and one attached volume.
 3. Add an automated post-deploy smoke check that fails if `/api/stats.total` is unexpectedly low.
 4. Add a startup guard for production that refuses to serve if `/data/dak.db` is newly created and Litestream restore was not attempted.
 5. Consider a dedicated restore runbook for replacing the production volume from R2/Litestream.

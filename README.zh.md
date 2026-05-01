@@ -339,9 +339,12 @@ cd packages/cli && bun run build
 Server 和 Worker 部署在 Fly.io（Tokyo nrt）：
 
 ```bash
-cd packages/server && fly deploy
+bun run deploy:server
 cd packages/ingestion-worker && fly deploy
 ```
+
+`bun run deploy:server` 会先执行部署前保护检查：`dak-server` 必须只有一台 Fly
+machine，且只有一个已挂载的 `dak_data` volume。
 
 ### Dashboard
 

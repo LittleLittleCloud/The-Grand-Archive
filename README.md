@@ -338,9 +338,12 @@ cd packages/cli && bun run build
 Server and Worker are deployed on Fly.io (Tokyo nrt):
 
 ```bash
-cd packages/server && fly deploy
+bun run deploy:server
 cd packages/ingestion-worker && fly deploy
 ```
+
+`bun run deploy:server` runs a pre-deploy guard that fails unless `dak-server`
+has exactly one Fly machine and one attached `dak_data` volume.
 
 ### Dashboard
 
