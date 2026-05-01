@@ -39,8 +39,7 @@ const FEATURES_KEYS = [
 const CODE_TABS = [
   {
     label: "Tell Your Agent",
-    code: `US-Iran war latest from dak-news,
-refer to dak-news.com/AGENTS.md for how to query`,
+    code: `Read https://dak-news.com/AGENTS.md and use DAK News to find the latest market-moving AI news from the past 7 days. Summarize the top 5 items with source links.`,
   },
   {
     label: "Skill",
