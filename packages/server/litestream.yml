@@ -7,4 +7,4 @@ dbs:
         endpoint: ${R2_ENDPOINT}
         access-key-id: ${R2_ACCESS_KEY_ID}
         secret-access-key: ${R2_SECRET_ACCESS_KEY}
-        sync-interval: 1h
+        sync-interval: 24h
