@@ -99,7 +99,34 @@ jobs:
       - name: Setup Fly
         uses: superfly/flyctl-actions/setup-flyctl@master
 
+      # Prevent orphan machines: scale to exactly 1 before deploying
+      - name: Ensure single worker machine
+        run: |
+          MACHINE_COUNT=$(flyctl machines list -a dak-worker --json | jq 'length')
+          echo "Current machine count: $MACHINE_COUNT"
+          if [ "$MACHINE_COUNT" -gt 1 ]; then
+            KEEP=$(flyctl machines list -a dak-worker --json | jq -r 'sort_by(.created_at) | .[0].id')
+            echo "Keeping oldest machine: $KEEP, destroying extras..."
+            for id in $(flyctl machines list -a dak-worker --json | jq -r '.[].id'); do
+              if [ "$id" != "$KEEP" ]; then
+                echo "Destroying $id..."
+                flyctl machines destroy "$id" -a dak-worker --force || true
+              fi
+            done
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Deploy worker
         run: flyctl deploy --config packages/ingestion-worker/fly.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      # Ensure the machine has the hourly schedule (deploy may reset it)
+      - name: Apply hourly schedule
+        run: |
+          MACHINE_ID=$(flyctl machines list -a dak-worker --json | jq -r '.[0].id')
+          echo "Applying hourly schedule to machine $MACHINE_ID..."
+          flyctl machine update "$MACHINE_ID" -a dak-worker --schedule hourly --restart no --yes
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

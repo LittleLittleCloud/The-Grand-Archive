@@ -4,12 +4,18 @@ primary_region = "nrt"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  strategy = "immediate"
+
 [env]
   DAK_SERVER_URL = "https://dak-news.com"
-  INTERVAL_MS = "1800000"
+  ONCE = "1"
 
-# No HTTP service — this is a background worker
-# Prevent auto-suspend so the timer keeps running
+# Scheduled worker: Fly starts this machine hourly, it runs once and exits.
+# restart=never so a clean exit (code 0) keeps the machine stopped until next schedule.
+[[restart]]
+  policy = "never"
+
 [[vm]]
   memory = "256mb"
   cpu_kind = "shared"
