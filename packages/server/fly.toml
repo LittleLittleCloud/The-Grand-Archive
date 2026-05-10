@@ -20,6 +20,7 @@ primary_region = "nrt"
   auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
+  processes = ["app"]
 
 [[vm]]
   memory = "512mb"
