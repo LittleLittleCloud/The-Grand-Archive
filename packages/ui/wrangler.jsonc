@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dak",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dak",
+      "database_id": "3613c8de-a4cb-472c-b00f-b4a4cc2bb5a0"
+    }
+  ],
+  // NOTE: Cloudflare Pages does NOT support the `ratelimits` binding (Workers-only).
+  // The tier middleware skips per-request rate limiting when RL_* are absent;
+  // tier history-window filtering (maxAge) still applies. Add zone-level WAF
+  // Rate Limiting rules for /api/*, or a KV/Durable Object limiter, if needed.
+  "vars": {
+    "SEARCH_ENGINE": "fts5",
+    "BETTER_AUTH_URL": "http://localhost:8788"
+  }
+}

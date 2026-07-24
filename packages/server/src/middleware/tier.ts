@@ -1,33 +1,35 @@
 import type { Context, Next } from "hono";
 import { apiKeyMiddleware } from "./api-key";
-import { auth } from "../auth/better-auth";
-import { getDb } from "../db/client";
+import { createAuth } from "../auth/better-auth";
+import type { HonoEnv } from "../types";
 
 export type Tier = "anonymous" | "free" | "premium";
 
 interface TierConfig {
-  rateLimit: number; // reqs per minute
-  maxAge: string | null; // ISO date cutoff, null = no limit
+  rateLimit: number; // reqs per minute (informational header; enforced by the RL binding)
+  maxAgeDays: number | null; // history window in days, null = no limit
 }
 
+// NOTE: the ISO cutoff is computed per-request (not here), because on deployed
+// Workers the current time is frozen at the Unix epoch during module init.
 const TIER_CONFIGS: Record<Tier, TierConfig> = {
-  anonymous: { rateLimit: 10, maxAge: dateOffset(-28) },
-  free: { rateLimit: 60, maxAge: dateOffset(-90) },
-  premium: { rateLimit: 120, maxAge: null },
+  anonymous: { rateLimit: 10, maxAgeDays: 28 },
+  free: { rateLimit: 60, maxAgeDays: 90 },
+  premium: { rateLimit: 120, maxAgeDays: null },
 };
-
-/** Sliding window counters: key -> { count, windowStart } */
-const counters = new Map<string, { count: number; windowStart: number }>();
 
 /**
  * Combined middleware: identify user → resolve tier → enforce rate limit → set maxAge.
+ * Rate limiting uses Cloudflare Rate Limiting bindings (one per tier). If the
+ * bindings are absent (e.g. local dev), rate limiting is skipped.
  */
 export function tierMiddleware() {
   const apiKey = apiKeyMiddleware();
 
-  return async (c: Context, next: Next) => {
-    // Step 1: try Better Auth session
+  return async (c: Context<HonoEnv>, next: Next) => {
+    // Step 1: Better Auth session
     try {
+      const auth = createAuth(c.env);
       const session = await auth.api.getSession({ headers: c.req.raw.headers });
       if (session) {
         c.set("userId", session.user.id);
@@ -36,72 +38,72 @@ export function tierMiddleware() {
       // Invalid session — ignore
     }
 
-    // Step 2: try API key (if not already identified via session)
+    // Step 2: API key (if not already identified via session)
     await apiKey(c, async () => {});
 
-    // Step 2: resolve tier
+    // Step 3: resolve tier
     const userId = c.get("userId") as string | undefined;
     let tier: Tier = "anonymous";
     let reqBalance = 0;
 
     if (userId) {
-      const db = getDb();
-      const user = db
-        .query("SELECT plan, reqBalance FROM users WHERE id = ?")
-        .get(userId) as { plan: string; reqBalance: number } | null;
+      const user = await c.env.DB.prepare(
+        "SELECT plan, reqBalance FROM users WHERE id = ?"
+      )
+        .bind(userId)
+        .first<{ plan: string; reqBalance: number }>();
 
       if (user) {
         tier = user.plan === "premium" ? "premium" : "free";
-        reqBalance = user.reqBalance;
+        reqBalance = user.reqBalance ?? 0;
       }
     }
 
     const config = TIER_CONFIGS[tier];
+    const maxAge = config.maxAgeDays == null ? null : dateOffset(-config.maxAgeDays);
     c.set("tier", tier);
-    c.set("maxAge", config.maxAge);
+    c.set("maxAge", maxAge);
 
-    // Step 3: rate limiting
-    const key = userId ?? (c.req.header("x-forwarded-for") ?? "unknown");
-    const now = Date.now();
-    const windowMs = 60_000; // 1 minute
+    // Step 4: rate limiting via the per-tier binding
+    const key =
+      userId ??
+      c.req.header("cf-connecting-ip") ??
+      c.req.header("x-forwarded-for") ??
+      "unknown";
 
-    let counter = counters.get(key);
-    if (!counter || now - counter.windowStart > windowMs) {
-      counter = { count: 0, windowStart: now };
-      counters.set(key, counter);
-    }
+    const limiter =
+      tier === "premium"
+        ? c.env.RL_PREMIUM
+        : tier === "free"
+          ? c.env.RL_FREE
+          : c.env.RL_ANON;
 
     const effectiveLimit = config.rateLimit + (reqBalance > 0 ? reqBalance : 0);
-
-    // Set rate limit headers
-    const remaining = Math.max(0, effectiveLimit - counter.count);
-    const reset = Math.ceil((counter.windowStart + windowMs) / 1000);
     c.header("X-RateLimit-Limit", String(effectiveLimit));
-    c.header("X-RateLimit-Remaining", String(remaining));
-    c.header("X-RateLimit-Reset", String(reset));
 
-    if (counter.count >= effectiveLimit) {
-      return c.json(
-        {
-          error: "Rate limit exceeded",
-          code: "RATE_LIMITED",
-          message: "Sign in or upgrade your plan for higher limits.",
-          upgrade: "/pricing",
-          limit: effectiveLimit,
-          reset,
-        },
-        429
-      );
-    }
-
-    counter.count++;
-
-    // Deduct from reqBalance if over plan limit and user has balance
-    if (userId && counter.count > config.rateLimit && reqBalance > 0) {
-      const db = getDb();
-      db.query(
-        "UPDATE users SET reqBalance = reqBalance - 1 WHERE id = ? AND reqBalance > 0"
-      ).run(userId);
+    if (limiter) {
+      const { success } = await limiter.limit({ key });
+      if (!success) {
+        // Allow over-limit requests to spend a top-up balance, if any.
+        if (userId && reqBalance > 0) {
+          await c.env.DB.prepare(
+            "UPDATE users SET reqBalance = reqBalance - 1 WHERE id = ? AND reqBalance > 0"
+          )
+            .bind(userId)
+            .run();
+        } else {
+          return c.json(
+            {
+              error: "Rate limit exceeded",
+              code: "RATE_LIMITED",
+              message: "Sign in or upgrade your plan for higher limits.",
+              upgrade: "/pricing",
+              limit: effectiveLimit,
+            },
+            429
+          );
+        }
+      }
     }
 
     await next();

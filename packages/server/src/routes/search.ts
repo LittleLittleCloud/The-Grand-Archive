@@ -1,8 +1,9 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { SearchRequestSchema, SearchResponseSchema } from "@dak/contract";
 import { search } from "../search/engine";
+import type { HonoEnv } from "../types";
 
-export const searchRoutes = new OpenAPIHono();
+export const searchRoutes = new OpenAPIHono<HonoEnv>();
 
 const searchRoute = createRoute({
   method: "get",
@@ -18,12 +19,12 @@ const searchRoute = createRoute({
   },
 });
 
-searchRoutes.openapi(searchRoute, (c) => {
+searchRoutes.openapi(searchRoute, async (c) => {
   const { q, category, source, from, to, limit, offset } = c.req.valid("query");
   const maxAge = c.get("maxAge") as string | null;
   const tier = (c.get("tier") as "anonymous" | "free" | "premium") ?? "anonymous";
 
-  const result = search(q, { category, source, from, to, maxAge: maxAge ?? undefined, limit, offset });
+  const result = await search(c.env.DB, q, { category, source, from, to, maxAge: maxAge ?? undefined, limit, offset });
 
   return c.json({
     results: result.results,

@@ -1,18 +1,11 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
 import { parse as parseYaml } from "yaml";
+// Bundled at build time via a wrangler Text rule (see wrangler.jsonc) so the
+// worker has no filesystem dependency.
+import sourcesYaml from "../../../../config/sources.yaml";
 import type { SourceConfig } from "../fetcher";
 
-const ROOT = process.env.CONFIG_DIR
-  ? resolve(process.env.CONFIG_DIR)
-  : resolve(import.meta.dir, "..", "..", "..", "..");
 const RSSHUB_PLACEHOLDER = "{{RSSHUB_BASE_URL}}";
 const DEFAULT_RSSHUB_BASE = "http://localhost:1200";
-const RSSHUB_BASE_URL = (() => {
-  const env = process.env.RSSHUB_BASE_URL?.trim();
-  const base = env && env.length > 0 ? env : DEFAULT_RSSHUB_BASE;
-  return base.replace(/\/+$/, "");
-})();
 
 interface RawSource {
   name: string;
@@ -22,29 +15,26 @@ interface RawSource {
   tags: string[];
 }
 
-function resolveRequestUrl(url: string): string {
+function resolveRequestUrl(url: string, base: string): string {
   if (!url) return url;
   if (url.startsWith("/")) {
-    return `${RSSHUB_BASE_URL}${url}`;
+    return `${base}${url}`;
   }
   if (url.includes(RSSHUB_PLACEHOLDER)) {
-    return url.split(RSSHUB_PLACEHOLDER).join(RSSHUB_BASE_URL);
+    return url.split(RSSHUB_PLACEHOLDER).join(base);
   }
   return url;
 }
 
-export function loadSources(): SourceConfig[] {
-  const raw = readFileSync(
-    resolve(ROOT, "config/sources.yaml"),
-    "utf-8"
-  );
-  const config = parseYaml(raw) as { sources: RawSource[] };
+export function loadSources(rsshubBaseUrl?: string): SourceConfig[] {
+  const base = (rsshubBaseUrl?.trim() || DEFAULT_RSSHUB_BASE).replace(/\/+$/, "");
+  const config = parseYaml(sourcesYaml as string) as { sources: RawSource[] };
   return config.sources
     .filter((s) => s.enabled)
     .map((source) => ({
       name: source.name,
       url: source.url,
-      requestUrl: resolveRequestUrl(source.url),
+      requestUrl: resolveRequestUrl(source.url, base),
       category: source.category,
       tags: source.tags ?? [],
     }));

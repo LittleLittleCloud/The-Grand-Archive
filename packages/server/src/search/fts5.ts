@@ -1,186 +1,156 @@
-import { getDb } from "../db/client";
+import type { D1Database } from "@cloudflare/workers-types";
 import { tokenize } from "./tokenizer";
-import type {
-  SearchEngine,
-  IndexedEntry,
-  SearchOptions,
-  SearchOutput,
-} from "./interface";
+import type { IndexedEntry, SearchOptions, SearchOutput } from "./interface";
 
-export class Fts5SearchEngine implements SearchEngine {
-  async init(): Promise<void> {
-    const db = getDb();
+/**
+ * Rebuild the entire FTS index from the entries table (one-time backfill after
+ * a data import). Uses the FTS5 'delete-all' command to clear the contentless
+ * index, then repopulates with jieba-tokenized title/body.
+ */
+export async function rebuildFtsIndex(db: D1Database): Promise<number> {
+  await db.prepare("INSERT INTO entries_fts(entries_fts) VALUES('delete-all')").run();
 
-    // Drop and recreate to ensure clean state (content-less tables don't support DELETE)
-    db.exec("DROP TABLE IF EXISTS entries_fts");
-    db.exec(`
-      CREATE VIRTUAL TABLE entries_fts USING fts5(
-        title,
-        body,
-        content='',
-        content_rowid='rowid'
-      );
-    `);
+  const { results } = await db
+    .prepare("SELECT rowid, title, content FROM entries")
+    .all<{ rowid: number; title: string; content: string | null }>();
 
-    // Rebuild index from entries table
-    const rows = db
-      .query("SELECT rowid, id, title, content FROM entries")
-      .all() as { rowid: number; id: string; title: string; content: string | null }[];
+  const insert = db.prepare(
+    "INSERT INTO entries_fts(rowid, title, body) VALUES (?, ?, ?)"
+  );
 
-    // Populate index
-    const insert = db.prepare(
-      "INSERT INTO entries_fts(rowid, title, body) VALUES (?, ?, ?)"
-    );
-    const insertAll = db.transaction(
-      (items: { rowid: number; title: string; content: string | null }[]) => {
-        for (const item of items) {
-          insert.run(item.rowid, tokenize(item.title), tokenize(item.content ?? ""));
-        }
-      }
-    );
-
-    insertAll(rows);
-    console.log(`🔍 FTS5 index built: ${rows.length} entries`);
+  const CHUNK = 100;
+  for (let i = 0; i < results.length; i += CHUNK) {
+    const batch = results
+      .slice(i, i + CHUNK)
+      .map((r) => insert.bind(r.rowid, tokenize(r.title), tokenize(r.content ?? "")));
+    if (batch.length > 0) await db.batch(batch);
   }
 
-  add(entries: IndexedEntry[]): void {
-    const db = getDb();
+  return results.length;
+}
 
-    // Look up rowid for each entry and upsert into FTS
-    const getRowid = db.prepare(
-      "SELECT rowid FROM entries WHERE id = ?"
+/**
+ * Add new entries to the FTS index. Ingestion only inserts brand-new rows
+ * (INSERT OR IGNORE upstream), so a plain insert keyed by entries.rowid is safe.
+ */
+export async function addToFtsIndex(
+  db: D1Database,
+  entries: IndexedEntry[]
+): Promise<void> {
+  if (entries.length === 0) return;
+
+  const stmts = [];
+  for (const entry of entries) {
+    const row = await db
+      .prepare("SELECT rowid FROM entries WHERE id = ?")
+      .bind(entry.id)
+      .first<{ rowid: number }>();
+    if (!row) continue;
+    stmts.push(
+      db
+        .prepare("INSERT INTO entries_fts(rowid, title, body) VALUES (?, ?, ?)")
+        .bind(row.rowid, tokenize(entry.title), tokenize(entry.content ?? ""))
     );
-    const deleteFts = db.prepare(
-      "INSERT INTO entries_fts(entries_fts, rowid, title, body) VALUES('delete', ?, ?, ?)"
-    );
-    const insertFts = db.prepare(
-      "INSERT INTO entries_fts(rowid, title, body) VALUES (?, ?, ?)"
-    );
+  }
+  if (stmts.length > 0) await db.batch(stmts);
+}
 
-    const upsert = db.transaction((items: IndexedEntry[]) => {
-      for (const entry of items) {
-        const row = getRowid.get(entry.id) as { rowid: number } | null;
-        if (!row) continue;
-
-        const tokenizedTitle = tokenize(entry.title);
-        const tokenizedContent = tokenize(entry.content ?? "");
-
-        // Try delete old entry first (ignore if not there)
-        try {
-          deleteFts.run(row.rowid, tokenizedTitle, tokenizedContent);
-        } catch {
-          // Entry may not exist in FTS yet, that's fine
-        }
-        insertFts.run(row.rowid, tokenizedTitle, tokenizedContent);
-      }
-    });
-
-    upsert(entries);
+/** Full-text search over the FTS index with filters + pagination. */
+export async function searchFts(
+  db: D1Database,
+  query: string,
+  options?: SearchOptions
+): Promise<SearchOutput> {
+  const tokenizedQuery = tokenize(query);
+  if (!tokenizedQuery.trim()) {
+    return { results: [], total: 0, tierFiltered: false };
   }
 
-  search(query: string, options?: SearchOptions): SearchOutput {
-    const db = getDb();
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
 
-    const tokenizedQuery = tokenize(query);
-    if (!tokenizedQuery.trim()) {
-      return { results: [], total: 0, tierFiltered: false };
+  if (options?.category) {
+    conditions.push("e.category = ?");
+    params.push(options.category);
+  }
+  if (options?.source) {
+    conditions.push("e.source = ?");
+    params.push(options.source);
+  }
+
+  let tierFiltered = false;
+  const fromDate = options?.maxAge ?? options?.from;
+  if (options?.maxAge) {
+    const userFrom = options?.from;
+    if (!userFrom || options.maxAge > userFrom) {
+      tierFiltered = true;
     }
+  }
+  if (fromDate) {
+    conditions.push("e.published >= ?");
+    params.push(fromDate);
+  }
+  if (options?.to) {
+    conditions.push("e.published <= ?");
+    params.push(options.to);
+  }
 
-    // Build WHERE clauses for filtering
-    const conditions: string[] = [];
-    const params: (string | number)[] = [];
+  const whereClause =
+    conditions.length > 0 ? "AND " + conditions.join(" AND ") : "";
 
-    if (options?.category) {
-      conditions.push("e.category = ?");
-      params.push(options.category);
-    }
-    if (options?.source) {
-      conditions.push("e.source = ?");
-      params.push(options.source);
-    }
+  // FTS5 MATCH query: quote each token to avoid syntax errors
+  const ftsQuery = tokenizedQuery
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => `"${t.replace(/"/g, '""')}"`)
+    .join(" OR ");
 
-    // Determine effective date range
-    let tierFiltered = false;
-    const fromDate = options?.maxAge ?? options?.from;
-    if (options?.maxAge) {
-      const userFrom = options?.from;
-      if (!userFrom || options.maxAge > userFrom) {
-        tierFiltered = true;
-      }
-    }
-    if (fromDate) {
-      conditions.push("e.published >= ?");
-      params.push(fromDate);
-    }
-    if (options?.to) {
-      conditions.push("e.published <= ?");
-      params.push(options.to);
-    }
+  const countRow = await db
+    .prepare(
+      `SELECT COUNT(*) as total
+       FROM entries_fts f
+       JOIN entries e ON e.rowid = f.rowid
+       WHERE f.entries_fts MATCH ?
+       ${whereClause}`
+    )
+    .bind(ftsQuery, ...params)
+    .first<{ total: number }>();
+  const total = countRow?.total ?? 0;
 
-    const whereClause =
-      conditions.length > 0 ? "AND " + conditions.join(" AND ") : "";
+  const limit = options?.limit ?? 20;
+  const offset = options?.offset ?? 0;
 
-    // FTS5 match query: quote each token to avoid syntax errors
-    const ftsQuery = tokenizedQuery
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((t) => `"${t.replace(/"/g, '""')}"`)
-      .join(" OR ");
-
-    // Count total
-    const countSql = `
-      SELECT COUNT(*) as total
-      FROM entries_fts f
-      JOIN entries e ON e.rowid = f.rowid
-      WHERE f.entries_fts MATCH ?
-      ${whereClause}
-    `;
-    const countRow = db.query(countSql).get(ftsQuery, ...params) as {
-      total: number;
-    };
-    const total = countRow.total;
-
-    // Fetch page
-    const limit = options?.limit ?? 20;
-    const offset = options?.offset ?? 0;
-
-    const selectSql = `
-      SELECT e.id, e.title, e.source, e.category, e.published,
-             rank * -1 as score
-      FROM entries_fts f
-      JOIN entries e ON e.rowid = f.rowid
-      WHERE f.entries_fts MATCH ?
-      ${whereClause}
-      ORDER BY rank
-      LIMIT ? OFFSET ?
-    `;
-
-    const rows = db
-      .query(selectSql)
-      .all(ftsQuery, ...params, limit, offset) as {
+  const { results } = await db
+    .prepare(
+      `SELECT e.id, e.title, e.source, e.category, e.published,
+              rank * -1 as score
+       FROM entries_fts f
+       JOIN entries e ON e.rowid = f.rowid
+       WHERE f.entries_fts MATCH ?
+       ${whereClause}
+       ORDER BY rank
+       LIMIT ? OFFSET ?`
+    )
+    .bind(ftsQuery, ...params, limit, offset)
+    .all<{
       id: string;
       title: string;
       source: string;
       category: string;
       published: string;
       score: number;
-    }[];
+    }>();
 
-    return {
-      results: rows.map((r) => ({
-        id: r.id,
-        title: r.title,
-        source: r.source,
-        category: r.category,
-        published: r.published,
-        score: r.score,
-      })),
-      total,
-      tierFiltered,
-    };
-  }
-
-  dispose(): void {
-    // FTS5 table lives in the DB, nothing to dispose
-  }
+  return {
+    results: results.map((r) => ({
+      id: r.id,
+      title: r.title,
+      source: r.source,
+      category: r.category,
+      published: r.published,
+      score: r.score,
+    })),
+    total,
+    tierFiltered,
+  };
 }

@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dak-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dak",
+      "database_id": "3613c8de-a4cb-472c-b00f-b4a4cc2bb5a0"
+    }
+  ],
+  "rules": [
+    { "type": "Text", "globs": ["**/*.yaml"], "fallthrough": true }
+  ],
+  "vars": {
+    "RSSHUB_BASE_URL": "https://da-an-du-ku-rsshub.fly.dev"
+  },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  }
+}

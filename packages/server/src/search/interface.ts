@@ -24,17 +24,3 @@ export interface SearchOutput {
   total: number;
   tierFiltered: boolean;
 }
-
-export interface SearchEngine {
-  /** Initialize / rebuild the full index from DB */
-  init(): Promise<void>;
-
-  /** Add or replace entries in the index */
-  add(entries: IndexedEntry[]): void;
-
-  /** Execute a search query with filters and pagination */
-  search(query: string, options?: SearchOptions): SearchOutput;
-
-  /** Dispose resources held by the engine */
-  dispose(): void;
-}
