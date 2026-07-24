@@ -88,6 +88,13 @@ ingestRoutes.post("/admin/reindex", requireApiKey(), async (c) => {
     return c.json({ error: "Forbidden", code: "INGEST_NOT_ALLOWED" }, 403);
   }
 
-  const indexed = await buildSearchIndex(c.env.DB);
-  return c.json({ ok: true, indexed });
+  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+  const limitParam = c.req.query("limit");
+  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+  // Clear the index only on the first chunk (offset 0) unless explicitly set.
+  const clearParam = c.req.query("clear");
+  const clear = clearParam != null ? clearParam !== "0" : offset === 0;
+
+  const indexed = await buildSearchIndex(c.env.DB, { offset, limit, clear });
+  return c.json({ ok: true, indexed, offset, limit: limit ?? null });
 });

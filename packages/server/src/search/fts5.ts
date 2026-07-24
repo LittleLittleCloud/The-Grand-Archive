@@ -3,15 +3,29 @@ import { tokenize } from "./tokenizer";
 import type { IndexedEntry, SearchOptions, SearchOutput } from "./interface";
 
 /**
- * Rebuild the entire FTS index from the entries table (one-time backfill after
- * a data import). Uses the FTS5 'delete-all' command to clear the contentless
- * index, then repopulates with jieba-tokenized title/body.
+ * Rebuild the FTS index from the entries table (backfill after a data import).
+ * Supports chunking via offset/limit so a large table can be indexed across
+ * several requests without exceeding the Worker's memory limit. `clear` issues
+ * the FTS5 'delete-all' command first (do this only on the first chunk).
  */
-export async function rebuildFtsIndex(db: D1Database): Promise<number> {
-  await db.prepare("INSERT INTO entries_fts(entries_fts) VALUES('delete-all')").run();
+export async function rebuildFtsIndex(
+  db: D1Database,
+  opts?: { offset?: number; limit?: number; clear?: boolean }
+): Promise<number> {
+  if (opts?.clear ?? true) {
+    await db.prepare("INSERT INTO entries_fts(entries_fts) VALUES('delete-all')").run();
+  }
+
+  let sql = "SELECT rowid, title, content FROM entries ORDER BY rowid";
+  const binds: number[] = [];
+  if (opts?.limit != null) {
+    sql += " LIMIT ? OFFSET ?";
+    binds.push(opts.limit, opts.offset ?? 0);
+  }
 
   const { results } = await db
-    .prepare("SELECT rowid, title, content FROM entries")
+    .prepare(sql)
+    .bind(...binds)
     .all<{ rowid: number; title: string; content: string | null }>();
 
   const insert = db.prepare(
