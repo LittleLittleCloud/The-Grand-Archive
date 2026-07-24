@@ -29,6 +29,9 @@ export interface Bindings {
   // Vars
   SEARCH_ENGINE?: string;
   BETTER_AUTH_URL?: string;
+  // Comma-separated list of extra origins Better Auth should trust as callback
+  // URLs (e.g. the worker's own *.workers.dev origin during/after DNS cutover).
+  TRUSTED_ORIGINS?: string;
   INGEST_ALLOWED_USERS?: string;
   EMAIL_FROM?: string;
 

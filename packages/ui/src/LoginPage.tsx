@@ -27,6 +27,9 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicLoading, setMagicLoading] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,6 +66,28 @@ export function LoginPage() {
   async function handleGoogle() {
     const { error: e } = await signIn.social({ provider: "google", callbackURL: window.location.origin });
     if (e) setError(e.message ?? "Google sign-in failed");
+  }
+
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!magicEmail.trim()) return;
+    setMagicLoading(true);
+    setError(null);
+    try {
+      const { error: authError } = await signIn.magicLink({
+        email: magicEmail.trim(),
+        callbackURL: window.location.origin,
+      });
+      if (authError) {
+        setError(authError.message ?? "Failed to send sign-in link");
+      } else {
+        setMagicSent(true);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setMagicLoading(false);
+    }
   }
 
   return (
@@ -162,6 +187,47 @@ export function LoginPage() {
               {loading ? "Signing in…" : "Sign in"}
             </button>
           </form>
+
+          {/* Passwordless — magic link */}
+          <div className="flex items-center gap-4 my-6">
+            <div className="flex-1 h-px bg-outline/15" />
+            <span className="font-label text-xs tracking-widest text-on-surface-variant uppercase">or</span>
+            <div className="flex-1 h-px bg-outline/15" />
+          </div>
+
+          {magicSent ? (
+            <p className="font-body text-sm text-on-surface-variant text-center leading-relaxed">
+              Check your inbox — we&apos;ve sent a one-time sign-in link to{" "}
+              <span className="text-on-surface">{magicEmail}</span>.
+            </p>
+          ) : (
+            <form onSubmit={handleMagicLink} className="space-y-3">
+              <div>
+                <label
+                  htmlFor="magic-email"
+                  className="block font-label text-xs tracking-widest text-on-surface-variant uppercase mb-2"
+                >
+                  Email sign-in link
+                </label>
+                <input
+                  id="magic-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={magicEmail}
+                  onChange={(e) => setMagicEmail(e.target.value)}
+                  className="w-full bg-transparent border-b border-outline/30 focus:border-primary py-2 text-on-surface font-body outline-none transition"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={magicLoading}
+                className="w-full py-2.5 bg-surface-high text-on-surface font-label text-sm font-semibold tracking-widest uppercase transition hover:bg-surface-dim disabled:opacity-50"
+              >
+                {magicLoading ? "Sending…" : "Email me a sign-in link"}
+              </button>
+            </form>
+          )}
         </div>
 
         <p className="mt-6 text-center font-label text-xs tracking-wide text-on-surface-variant">

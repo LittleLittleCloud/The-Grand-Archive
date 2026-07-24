@@ -1,9 +1,9 @@
 import { createAuthClient } from "better-auth/react";
-import { usernameClient, adminClient } from "better-auth/client/plugins";
+import { usernameClient, adminClient, magicLinkClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_API_URL ?? "",
-  plugins: [usernameClient(), adminClient()],
+  plugins: [usernameClient(), adminClient(), magicLinkClient()],
 });
 
 export const {
