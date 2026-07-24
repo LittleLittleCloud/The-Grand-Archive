@@ -12,13 +12,36 @@ import { sendAuthEmail } from "./email";
  * matches the live config (plugins, additionalFields, model names).
  */
 export function authOptions(env: Partial<Bindings>): BetterAuthOptions {
-  const BASE_URL = env.BETTER_AUTH_URL ?? "http://localhost:8787";
+  // When BETTER_AUTH_URL is empty/unset, Better Auth infers baseURL from the
+  // request — which is what we want for dynamic preview (workers.dev) URLs.
+  // Production sets it to the real domain; local dev sets it via .dev.vars.
+  const configured = env.BETTER_AUTH_URL?.trim();
+  const BASE_URL = configured && configured.length > 0 ? configured : undefined;
 
   return {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: BASE_URL,
     basePath: "/api/auth" as const,
-    trustedOrigins: [BASE_URL, "http://localhost:5173"],
+    // Trust the known hosts plus the deployment's OWN origin (covers workers.dev
+    // preview URLs and the custom domain). A same-origin request is never
+    // cross-site, so trusting it is safe for CSRF.
+    trustedOrigins: (request?: Request) => {
+      const origins = new Set<string>([
+        "http://localhost:5173",
+        "http://localhost:8787",
+      ]);
+      if (BASE_URL) origins.add(BASE_URL);
+      const origin = request?.headers.get("origin");
+      const host = request?.headers.get("host");
+      if (origin) {
+        try {
+          if (new URL(origin).host === host) origins.add(origin);
+        } catch {
+          // ignore malformed origin
+        }
+      }
+      return [...origins];
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,

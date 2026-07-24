@@ -24,6 +24,6 @@
   ],
   "vars": {
     "SEARCH_ENGINE": "fts5",
-    "BETTER_AUTH_URL": "http://localhost:8787"
+    "BETTER_AUTH_URL": "https://dak-news.com"
   }
 }

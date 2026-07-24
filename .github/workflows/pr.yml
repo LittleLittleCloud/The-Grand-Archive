@@ -75,7 +75,9 @@ jobs:
         id: deploy
         working-directory: packages/server
         run: |
-          bunx wrangler versions upload | tee /tmp/deploy.log
+          # Blank BETTER_AUTH_URL so Better Auth infers baseURL from the preview
+          # URL (production wrangler.jsonc sets it to https://dak-news.com).
+          bunx wrangler versions upload --var BETTER_AUTH_URL: | tee /tmp/deploy.log
           URL=$(grep -oiE 'https://[a-z0-9._-]+\.workers\.dev' /tmp/deploy.log | tail -1)
           echo "url=$URL" >> "$GITHUB_OUTPUT"
         env:
