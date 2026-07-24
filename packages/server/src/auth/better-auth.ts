@@ -57,6 +57,17 @@ export function authOptions(env: Partial<Bindings>): BetterAuthOptions {
           html: `<p>Hi ${user.name},</p><p>Click the link below to reset your password:</p><p><a href="${url}">${url}</a></p>`,
         });
       },
+      // Completing an emailed reset proves the user controls the address, so
+      // mark it verified. Without this, requireEmailVerification blocks the very
+      // login the user attempts right after resetting (and sendOnSignIn just
+      // loops another verification email).
+      onPasswordReset: async ({ user }) => {
+        if (env.DB) {
+          await env.DB.prepare("UPDATE users SET emailVerified = 1 WHERE id = ?")
+            .bind(user.id)
+            .run();
+        }
+      },
     },
     emailVerification: {
       sendOnSignUp: true,
