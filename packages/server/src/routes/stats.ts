@@ -1,8 +1,8 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { StatsResponseSchema } from "@dak/contract";
-import { getDb } from "../db/client";
+import type { HonoEnv } from "../types";
 
-export const statsRoutes = new OpenAPIHono();
+export const statsRoutes = new OpenAPIHono<HonoEnv>();
 
 const statsRoute = createRoute({
   method: "get",
@@ -17,28 +17,32 @@ const statsRoute = createRoute({
   },
 });
 
-statsRoutes.openapi(statsRoute, (c) => {
-  const db = getDb();
+statsRoutes.openapi(statsRoute, async (c) => {
+  const db = c.env.DB;
 
   const total = (
-    db.query("SELECT COUNT(*) as count FROM entries").get() as { count: number }
-  ).count;
+    await db.prepare("SELECT COUNT(*) as count FROM entries").first<{ count: number }>()
+  )?.count ?? 0;
 
-  const byCategory = db
-    .query(
-      "SELECT category, COUNT(*) as count FROM entries GROUP BY category ORDER BY count DESC"
-    )
-    .all() as { category: string; count: number }[];
+  const byCategory = (
+    await db
+      .prepare(
+        "SELECT category, COUNT(*) as count FROM entries GROUP BY category ORDER BY count DESC"
+      )
+      .all<{ category: string; count: number }>()
+  ).results;
 
-  const bySource = db
-    .query(
-      "SELECT source, COUNT(*) as count FROM entries GROUP BY source ORDER BY count DESC"
-    )
-    .all() as { source: string; count: number }[];
+  const bySource = (
+    await db
+      .prepare(
+        "SELECT source, COUNT(*) as count FROM entries GROUP BY source ORDER BY count DESC"
+      )
+      .all<{ source: string; count: number }>()
+  ).results;
 
   const lastUpdated = (
-    db.query("SELECT MAX(created_at) as last FROM entries").get() as { last: string | null }
-  ).last;
+    await db.prepare("SELECT MAX(created_at) as last FROM entries").first<{ last: string | null }>()
+  )?.last ?? null;
 
   return c.json({ total, byCategory, bySource, lastUpdated }, 200);
 });

@@ -1,0 +1,88 @@
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/contract/**"
+      - "packages/server/**"
+      - "packages/ui/**"
+      - "packages/ingestion-worker/**"
+      - "config/sources.yaml"
+      - ".github/workflows/deploy-cf.yml"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deploy target"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - server
+          - ingestion
+
+concurrency:
+  group: deploy-cf
+  cancel-in-progress: false
+
+jobs:
+  # API Worker: serves the static UI (assets) + /api + SEO, with D1, send_email,
+  # and rate-limit bindings. Applies D1 migrations before deploying.
+  deploy-server:
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'server'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build UI
+        run: cd packages/ui && bun run build
+
+      - name: Apply D1 migrations (remote)
+        working-directory: packages/server
+        run: bunx wrangler d1 migrations apply dak --remote
+
+      - name: Deploy API Worker
+        working-directory: packages/server
+        run: bunx wrangler deploy
+
+  # Ingestion Worker: cron-triggered (*/30) RSS ingestion writing directly to D1.
+  deploy-ingestion:
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && (inputs.target == 'all' || inputs.target == 'ingestion'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Deploy ingestion Worker
+        working-directory: packages/ingestion-worker
+        run: bunx wrangler deploy

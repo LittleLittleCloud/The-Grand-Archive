@@ -26,6 +26,12 @@ packages/server/data/
 # Env
 .env
 .env.local
+.dev.vars
+
+# Cloudflare / Wrangler
+.wrangler/
+.wrangler-state/
+.spike-cf/
 
 # Temp
 *.tmp

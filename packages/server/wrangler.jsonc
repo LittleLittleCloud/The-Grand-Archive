@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dak-server",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dak",
+      "database_id": "3613c8de-a4cb-472c-b00f-b4a4cc2bb5a0",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "assets": {
+    "directory": "../ui/dist",
+    "binding": "ASSETS"
+  },
+  "send_email": [{ "name": "EMAIL" }],
+  "ratelimits": [
+    { "name": "RL_ANON", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
+    { "name": "RL_FREE", "namespace_id": "1002", "simple": { "limit": 60, "period": 60 } },
+    { "name": "RL_PREMIUM", "namespace_id": "1003", "simple": { "limit": 120, "period": 60 } }
+  ],
+  "vars": {
+    "SEARCH_ENGINE": "fts5",
+    "BETTER_AUTH_URL": "https://dak-news.com"
+  }
+}

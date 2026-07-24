@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { getDb } from "../db/client";
-import { readFileSync } from "fs";
 import { swaggerUI } from "@hono/swagger-ui";
+import type { HonoEnv } from "../types";
 
-export const seoRoutes = new Hono();
+export const seoRoutes = new Hono<HonoEnv>();
 
 /* ── robots.txt ── */
 seoRoutes.get("/robots.txt", (c) => {
@@ -36,20 +35,17 @@ seoRoutes.get("/llms.txt", (c) => {
 seoRoutes.get("/docs", swaggerUI({ url: "/openapi.json" }));
 
 /* ── Markdown Export for LLMs (GEO) ── */
-seoRoutes.get("/entry/:id", (c, next) => {
+seoRoutes.get("/entry/:id", async (c, next) => {
   const rawId = decodeURIComponent(c.req.param("id"));
   if (!rawId.endsWith(".md")) {
     return next();
   }
   const id = rawId.slice(0, -3);
-  const db = getDb();
-  
-  const entry = db
-    .query<
-      { title: string; source: string; category: string; published: string; content: string | null; url: string },
-      [string]
-    >("SELECT title, source, category, published, content, url FROM entries WHERE id = ?")
-    .get(id);
+
+  const entry = await c.env.DB
+    .prepare("SELECT title, source, category, published, content, url FROM entries WHERE id = ?")
+    .bind(id)
+    .first<{ title: string; source: string; category: string; published: string; content: string | null; url: string }>();
 
   if (!entry) {
     return c.text("Entry not found", 404);
@@ -310,9 +306,12 @@ seoRoutes.get("/sitemap.xml", (c) => {
 /* ── Server-side meta injection for /entry/:id ── */
 let indexHtml: string | null = null;
 
-function getIndexHtml(staticDir: string): string {
+async function getIndexHtml(c: { env: HonoEnv["Bindings"]; req: { url: string } }): Promise<string> {
   if (!indexHtml) {
-    indexHtml = readFileSync(staticDir + "/index.html", "utf-8");
+    const assets = c.env.ASSETS;
+    if (!assets) throw new Error("ASSETS binding not configured");
+    const res = await assets.fetch(new Request(new URL("/", c.req.url).toString()));
+    indexHtml = await res.text();
   }
   return indexHtml!;
 }
@@ -322,22 +321,19 @@ function getIndexHtml(staticDir: string): string {
  * so crawlers see meaningful content without JS execution.
  * Also injects SEO-optimized meta for /search and /feeds pages.
  */
-export function entryMetaMiddleware(staticDir: string) {
-  const app = new Hono();
+export function entryMetaMiddleware() {
+  const app = new Hono<HonoEnv>();
 
   /* /entry/:id — full meta + JSON-LD */
-  app.get("/entry/:id", (c) => {
+  app.get("/entry/:id", async (c) => {
     const id = decodeURIComponent(c.req.param("id"));
-    const db = getDb();
 
-    const entry = db
-      .query<
-        { title: string; source: string; category: string; published: string; content: string | null },
-        [string]
-      >("SELECT title, source, category, published, content FROM entries WHERE id = ?")
-      .get(id);
+    const entry = await c.env.DB
+      .prepare("SELECT title, source, category, published, content FROM entries WHERE id = ?")
+      .bind(id)
+      .first<{ title: string; source: string; category: string; published: string; content: string | null }>();
 
-    let html = getIndexHtml(staticDir);
+    let html = await getIndexHtml(c);
 
     if (entry) {
       const title = escapeHtml(entry.title) + " — 大案牍库";
@@ -409,8 +405,8 @@ export function entryMetaMiddleware(staticDir: string) {
   });
 
   /* /search — SEO meta for search page */
-  app.get("/search", (c) => {
-    let html = getIndexHtml(staticDir);
+  app.get("/search", async (c) => {
+    let html = await getIndexHtml(c);
     const metaTags = [
       `<title>搜索新闻 — 大案牍库 AI 新闻聚合</title>`,
       `<meta name="description" content="在大案牍库中全文搜索 38,000+ 条新闻。支持按分类、来源、日期过滤，覆盖财经、地缘政治、科技等领域。">`,
@@ -429,8 +425,8 @@ export function entryMetaMiddleware(staticDir: string) {
   });
 
   /* /feeds — SEO meta for feeds page */
-  app.get("/feeds", (c) => {
-    let html = getIndexHtml(staticDir);
+  app.get("/feeds", async (c) => {
+    let html = await getIndexHtml(c);
     const metaTags = [
       `<title>信息源列表 — 大案牍库 AI 新闻聚合</title>`,
       `<meta name="description" content="大案牍库追踪的 20+ 权威信息源：Bloomberg、CNBC、华尔街见闻、BBC Chinese、Hacker News 等，每 30 分钟更新。">`,

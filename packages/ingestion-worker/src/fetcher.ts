@@ -11,9 +11,10 @@ export function normalizeDate(raw: string): string {
 }
 
 const parser = new RSSParser({
-  timeout: 30_000,
   headers: { "User-Agent": "DaAnDuKu-Ingestion/2.0" },
 });
+
+const FETCH_TIMEOUT_MS = 30_000;
 
 export interface SourceConfig {
   name: string;
@@ -34,9 +35,7 @@ export async function fetchAllSources(
       allEntries.push(...entries);
       console.log(`  ✓ ${source.name}: ${entries.length} entries`);
     } catch (err) {
-      console.error(
-        `  ✗ ${source.name}: ${(err as Error).message}`
-      );
+      console.error(`  ✗ ${source.name}: ${(err as Error).message}`);
     }
   }
 
@@ -44,7 +43,23 @@ export async function fetchAllSources(
 }
 
 async function fetchSource(source: SourceConfig): Promise<EntryCreate[]> {
-  const feed = await parser.parseURL(source.requestUrl);
+  // Fetch the feed with the platform fetch (Workers has no Node http client),
+  // then parse the XML string with rss-parser.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let xml: string;
+  try {
+    const res = await fetch(source.requestUrl, {
+      headers: { "User-Agent": "DaAnDuKu-Ingestion/2.0" },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    xml = await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const feed = await parser.parseString(xml);
   const entries: EntryCreate[] = [];
 
   for (const item of feed.items) {
@@ -52,16 +67,15 @@ async function fetchSource(source: SourceConfig): Promise<EntryCreate[]> {
     const link = item.link || "";
     const guid = item.guid || item.id || link;
     const rawContent =
-      item["content:encoded"] ||
+      (item as Record<string, string>)["content:encoded"] ||
       item.content ||
       item.contentSnippet ||
-      item.summary ||
+      (item as Record<string, string>).summary ||
       "";
 
     const id = dedupHash(guid, title);
     const content = parseContent(rawContent);
-    const publishedRaw =
-      item.isoDate || item.pubDate || new Date().toISOString();
+    const publishedRaw = item.isoDate || item.pubDate || new Date().toISOString();
     const published = normalizeDate(publishedRaw);
 
     entries.push({
@@ -72,7 +86,7 @@ async function fetchSource(source: SourceConfig): Promise<EntryCreate[]> {
       source: source.name,
       category: source.category as EntryCreate["category"],
       tags: [...source.tags],
-      author: item.creator || item.author || null,
+      author: item.creator || (item as Record<string, string>).author || null,
       language: "en",
       published,
     });

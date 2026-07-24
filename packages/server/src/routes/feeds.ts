@@ -1,16 +1,17 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { FeedsRequestSchema, FeedsResponseSchema, EntrySchema } from "@dak/contract";
 import { z } from "zod";
-import { getDb } from "../db/client";
+import type { HonoEnv } from "../types";
 
-export const feedsRoutes = new OpenAPIHono();
+export const feedsRoutes = new OpenAPIHono<HonoEnv>();
 
-feedsRoutes.get("/feeds/status", (c) => {
-  const db = getDb();
+feedsRoutes.get("/feeds/status", async (c) => {
+  const db = c.env.DB;
 
-  const feeds = db
-    .query(
-      `SELECT
+  const feeds = (
+    await db
+      .prepare(
+        `SELECT
          source,
          category,
          COUNT(*) as entryCount,
@@ -20,19 +21,21 @@ feedsRoutes.get("/feeds/status", (c) => {
        FROM entries
        GROUP BY source
        ORDER BY entryCount DESC`
-    )
-    .all() as {
-    source: string;
-    category: string;
-    entryCount: number;
-    earliest: string | null;
-    latest: string | null;
-    lastIngested: string | null;
-  }[];
+      )
+      .all<{
+        source: string;
+        category: string;
+        entryCount: number;
+        earliest: string | null;
+        latest: string | null;
+        lastIngested: string | null;
+      }>()
+  ).results;
 
-  const dailyBins = db
-    .query(
-      `SELECT
+  const dailyBins = (
+    await db
+      .prepare(
+        `SELECT
          source,
          date(published) as day,
          COUNT(*) as count
@@ -40,8 +43,9 @@ feedsRoutes.get("/feeds/status", (c) => {
        WHERE published >= date('now', '-90 days')
        GROUP BY source, date(published)
        ORDER BY source, day`
-    )
-    .all() as { source: string; day: string; count: number }[];
+      )
+      .all<{ source: string; day: string; count: number }>()
+  ).results;
 
   return c.json({ feeds, dailyBins });
 });
@@ -60,10 +64,10 @@ const feedsListRoute = createRoute({
   },
 });
 
-feedsRoutes.openapi(feedsListRoute, (c) => {
+feedsRoutes.openapi(feedsListRoute, async (c) => {
   const { category, source, from, to, limit, offset } = c.req.valid("query");
   const maxAge = c.get("maxAge") as string | null;
-  const db = getDb();
+  const db = c.env.DB;
 
   const conditions: string[] = [];
   const params: (string | number)[] = [];
@@ -92,17 +96,18 @@ feedsRoutes.openapi(feedsListRoute, (c) => {
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const total = (
-    db.query(`SELECT COUNT(*) as count FROM entries ${where}`).get(...params) as { count: number }
-  ).count;
+    await db.prepare(`SELECT COUNT(*) as count FROM entries ${where}`).bind(...params).first<{ count: number }>()
+  )?.count ?? 0;
 
-  const entries = db
-    .query(
-      `SELECT * FROM entries ${where} ORDER BY published DESC LIMIT ? OFFSET ?`
-    )
-    .all(...params, limit, offset);
+  const entries = (
+    await db
+      .prepare(`SELECT * FROM entries ${where} ORDER BY published DESC LIMIT ? OFFSET ?`)
+      .bind(...params, limit, offset)
+      .all<Record<string, unknown>>()
+  ).results;
 
   // Parse tags JSON for each entry
-  const parsed_entries = (entries as Record<string, unknown>[]).map((e) => ({
+  const parsed_entries = entries.map((e) => ({
     ...e,
     tags: e.tags ? JSON.parse(e.tags as string) : [],
   }));
@@ -125,10 +130,10 @@ const feedsGetRoute = createRoute({
   },
 });
 
-feedsRoutes.openapi(feedsGetRoute, (c) => {
+feedsRoutes.openapi(feedsGetRoute, async (c) => {
   const { id } = c.req.valid("param");
-  const db = getDb();
-  const entry = db.query("SELECT * FROM entries WHERE id = ?").get(id) as Record<string, unknown> | null;
+  const db = c.env.DB;
+  const entry = await db.prepare("SELECT * FROM entries WHERE id = ?").bind(id).first<Record<string, unknown>>();
 
   if (!entry) {
     return c.json({ error: "Not found", code: "NOT_FOUND" } as any, 200);

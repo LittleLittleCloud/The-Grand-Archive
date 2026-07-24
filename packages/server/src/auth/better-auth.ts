@@ -1,93 +1,115 @@
 import { betterAuth } from "better-auth";
+import type { BetterAuthOptions } from "better-auth";
 import { username, admin } from "better-auth/plugins";
-import { Database } from "bun:sqlite";
-import { Resend } from "resend";
+import { Kysely } from "kysely";
+import { D1Dialect } from "kysely-d1";
+import type { Bindings } from "../types";
+import { sendAuthEmail } from "./email";
 
-const DB_PATH = process.env.DB_PATH ?? "./data/dak.db";
-const resend = new Resend(process.env.RESEND_API_KEY);
-const EMAIL_FROM = process.env.EMAIL_FROM ?? "onboarding@resend.dev";
+/**
+ * Better Auth options excluding the database. Shared between the runtime factory
+ * (createAuth) and the schema-generation entry so the generated migration always
+ * matches the live config (plugins, additionalFields, model names).
+ */
+export function authOptions(env: Partial<Bindings>): BetterAuthOptions {
+  // When BETTER_AUTH_URL is empty/unset, Better Auth infers baseURL from the
+  // request — which is what we want for dynamic preview (workers.dev) URLs.
+  // Production sets it to the real domain; local dev sets it via .dev.vars.
+  const configured = env.BETTER_AUTH_URL?.trim();
+  const BASE_URL = configured && configured.length > 0 ? configured : undefined;
 
-const BASE_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
-
-export const auth = betterAuth({
-  database: new Database(DB_PATH, { create: true }),
-  baseURL: BASE_URL,
-  basePath: "/api/auth",
-  trustedOrigins: [BASE_URL, "http://localhost:5173"],
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: true,
-    sendResetPassword: async ({ user, url }) => {
-      console.log(`[auth:email] Sending reset-password email to=${user.email} url=${url}`);
-      const { data, error } = await resend.emails.send({
-        from: EMAIL_FROM,
-        to: user.email,
-        subject: "Reset your password — 大案牍库",
-        html: `<p>Hi ${user.name},</p><p>Click the link below to reset your password:</p><p><a href="${url}">${url}</a></p>`,
-      });
-      if (error) {
-        console.error("[auth:email] Resend reset-password error:", error);
-        console.log(`[auth:email] ⚠️  Reset-password link (use manually): ${url}`);
-      } else {
-        console.log("[auth:email] Reset-password email sent, id:", data?.id);
+  return {
+    secret: env.BETTER_AUTH_SECRET,
+    baseURL: BASE_URL,
+    basePath: "/api/auth" as const,
+    // Trust the known hosts plus the deployment's OWN origin (covers workers.dev
+    // preview URLs and the custom domain). A same-origin request is never
+    // cross-site, so trusting it is safe for CSRF.
+    trustedOrigins: (request?: Request) => {
+      const origins = new Set<string>([
+        "http://localhost:5173",
+        "http://localhost:8787",
+      ]);
+      if (BASE_URL) origins.add(BASE_URL);
+      const origin = request?.headers.get("origin");
+      const host = request?.headers.get("host");
+      if (origin) {
+        try {
+          if (new URL(origin).host === host) origins.add(origin);
+        } catch {
+          // ignore malformed origin
+        }
       }
+      return [...origins];
     },
-  },
-  emailVerification: {
-    sendOnSignUp: true,
-    sendOnSignIn: true,
-    sendVerificationEmail: async ({ user, url }) => {
-      console.log(`[auth:email] Sending verification email to=${user.email} url=${url}`);
-      const { data, error } = await resend.emails.send({
-        from: EMAIL_FROM,
-        to: user.email,
-        subject: "Verify your email — 大案牍库",
-        html: `<p>Click the link below to verify your email:</p><p><a href="${url}">${url}</a></p>`,
-      });
-      if (error) {
-        console.error("[auth:email] Resend verification error:", error);
-        console.log(`[auth:email] ⚠️  Verification link (use manually): ${url}`);
-      } else {
-        console.log("[auth:email] Verification email sent, id:", data?.id);
-      }
-    },
-  },
-  socialProviders: {
-    github: {
-      clientId: process.env.GITHUB_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-      mapProfileToUser: (profile) => ({
-        username: profile.login,
-        displayUsername: profile.login,
-      }),
-    },
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      mapProfileToUser: (profile) => ({
-        username: profile.email?.split("@")[0],
-      }),
-    },
-  },
-  plugins: [username(), admin()],
-  user: {
-    modelName: "users",
-    additionalFields: {
-      plan: {
-        type: "string",
-        defaultValue: "free",
-        required: false,
-        input: false,
-      },
-      reqBalance: {
-        type: "number",
-        defaultValue: 0,
-        required: false,
-        input: false,
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: true,
+      sendResetPassword: async ({ user, url }) => {
+        await sendAuthEmail(env, {
+          to: user.email,
+          subject: "Reset your password — 大案牍库",
+          html: `<p>Hi ${user.name},</p><p>Click the link below to reset your password:</p><p><a href="${url}">${url}</a></p>`,
+        });
       },
     },
-  },
-  session: {
-    modelName: "sessions",
-  },
-});
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        await sendAuthEmail(env, {
+          to: user.email,
+          subject: "Verify your email — 大案牍库",
+          html: `<p>Click the link below to verify your email:</p><p><a href="${url}">${url}</a></p>`,
+        });
+      },
+    },
+    socialProviders: {
+      github: {
+        clientId: env.GITHUB_CLIENT_ID as string,
+        clientSecret: env.GITHUB_CLIENT_SECRET as string,
+        mapProfileToUser: (profile) => ({
+          username: profile.login,
+          displayUsername: profile.login,
+        }),
+      },
+      google: {
+        clientId: env.GOOGLE_CLIENT_ID as string,
+        clientSecret: env.GOOGLE_CLIENT_SECRET as string,
+        mapProfileToUser: (profile) => ({
+          username: profile.email?.split("@")[0],
+        }),
+      },
+    },
+    plugins: [username(), admin()],
+    user: {
+      modelName: "users",
+      additionalFields: {
+        plan: { type: "string", defaultValue: "free", required: false, input: false },
+        reqBalance: { type: "number", defaultValue: 0, required: false, input: false },
+      },
+    },
+    session: { modelName: "sessions" },
+  };
+}
+
+/**
+ * Better Auth is created per-request on Workers because secrets/bindings live on
+ * `env`, not `process.env`. The instance is cheap; the Kysely D1 dialect is the
+ * durable store for users/sessions/account/verification.
+ */
+export function createAuth(env: Bindings) {
+  const db = new Kysely<Record<string, never>>({
+    dialect: new D1Dialect({ database: env.DB as unknown as D1DialectDatabase }),
+  });
+
+  return betterAuth({
+    database: { db, type: "sqlite" },
+    ...authOptions(env),
+  });
+}
+
+export type Auth = ReturnType<typeof createAuth>;
+
+// kysely-d1 expects its own D1Database type; alias to avoid a hard import cycle.
+type D1DialectDatabase = ConstructorParameters<typeof D1Dialect>[0]["database"];
