@@ -31,6 +31,11 @@ export function authOptions(env: Partial<Bindings>): BetterAuthOptions {
         "http://localhost:8787",
       ]);
       if (BASE_URL) origins.add(BASE_URL);
+      // Extra origins (e.g. the worker's own *.workers.dev URL) so callback URLs
+      // minted while the UI was served from that origin still validate.
+      for (const o of (env.TRUSTED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean)) {
+        origins.add(o);
+      }
       const origin = request?.headers.get("origin");
       const host = request?.headers.get("host");
       if (origin) {

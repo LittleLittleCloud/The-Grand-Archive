@@ -24,6 +24,7 @@
   ],
   "vars": {
     "SEARCH_ENGINE": "fts5",
-    "BETTER_AUTH_URL": "https://dak-news.com"
+    "BETTER_AUTH_URL": "https://dak-news.com",
+    "TRUSTED_ORIGINS": "https://dak-server.g2260578356.workers.dev"
   }
 }
