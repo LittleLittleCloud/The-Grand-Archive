@@ -17,8 +17,24 @@
   "rules": [
     { "type": "Text", "globs": ["**/*.yaml"], "fallthrough": true }
   ],
+  "containers": [
+    {
+      "class_name": "RsshubContainer",
+      "image": "docker.io/diygod/rsshub:chromium-bundled-2026-07-24",
+      "instance_type": "standard-1",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "class_name": "RsshubContainer", "name": "RSSHUB" }
+    ]
+  },
+  "migrations": [
+    { "new_sqlite_classes": ["RsshubContainer"], "tag": "v1" }
+  ],
   "vars": {
-    "RSSHUB_BASE_URL": "https://da-an-du-ku-rsshub.fly.dev"
+    "RSSHUB_BASE_URL": "http://rsshub.internal"
   },
   "observability": {
     "logs": {

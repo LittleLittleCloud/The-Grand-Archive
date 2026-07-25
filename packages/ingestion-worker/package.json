@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@cloudflare/containers": "^0.3.7",
     "@dak/contract": "workspace:*",
     "@mixmark-io/domino": "^2.2.0",
     "jieba-wasm": "^2.2.0",

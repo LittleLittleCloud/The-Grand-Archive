@@ -14,8 +14,8 @@ interface TierConfig {
 // Workers the current time is frozen at the Unix epoch during module init.
 const TIER_CONFIGS: Record<Tier, TierConfig> = {
   anonymous: { rateLimit: 10, maxAgeDays: 28 },
-  free: { rateLimit: 60, maxAgeDays: 90 },
-  premium: { rateLimit: 120, maxAgeDays: null },
+  free: { rateLimit: 30, maxAgeDays: 28 },
+  premium: { rateLimit: 120, maxAgeDays: 90 },
 };
 
 /**
@@ -27,6 +27,32 @@ export function tierMiddleware() {
   const apiKey = apiKeyMiddleware();
 
   return async (c: Context<HonoEnv>, next: Next) => {
+    // Fast path: a request with no session cookie and no API key is
+    // unauthenticated for certain → anonymous tier. Rate-limit it by IP up
+    // front and skip the Better Auth session check and the D1 tier lookup
+    // entirely, so abusive unauthenticated traffic (scrapers) stays cheap.
+    const cookie = c.req.header("cookie") ?? "";
+    const hasSessionCookie = cookie.includes("better-auth.session_token");
+    const hasApiKey =
+      !!c.req.header("authorization") || !!c.req.header("x-api-key");
+
+    if (!hasSessionCookie && !hasApiKey) {
+      const config = TIER_CONFIGS.anonymous;
+      c.set("tier", "anonymous");
+      c.set("maxAge", config.maxAgeDays == null ? null : dateOffset(-config.maxAgeDays));
+      const key =
+        c.req.header("cf-connecting-ip") ??
+        c.req.header("x-forwarded-for") ??
+        "unknown";
+      c.header("X-RateLimit-Limit", String(config.rateLimit));
+      if (c.env.RL_ANON) {
+        const { success } = await c.env.RL_ANON.limit({ key });
+        if (!success) return rejectRateLimited(c, "anonymous", key, config.rateLimit);
+      }
+      await next();
+      return;
+    }
+
     // Step 1: Better Auth session
     try {
       const auth = createAuth(c.env);
@@ -92,22 +118,44 @@ export function tierMiddleware() {
             .bind(userId)
             .run();
         } else {
-          return c.json(
-            {
-              error: "Rate limit exceeded",
-              code: "RATE_LIMITED",
-              message: "Sign in or upgrade your plan for higher limits.",
-              upgrade: "/pricing",
-              limit: effectiveLimit,
-            },
-            429
-          );
+          return rejectRateLimited(c, tier, key, effectiveLimit);
         }
       }
     }
 
     await next();
   };
+}
+
+/** Log a rate_limited event and return the 429 response. */
+function rejectRateLimited(c: Context<HonoEnv>, tier: Tier, key: string, limit: number) {
+  const cf = (c.req.raw as unknown as { cf?: Record<string, unknown> }).cf;
+  console.warn(
+    JSON.stringify({
+      evt: "rate_limited",
+      key,
+      tier,
+      userId: (c.get("userId") as string | undefined) ?? null,
+      ip: c.req.header("cf-connecting-ip") ?? "?",
+      country: cf?.country ?? null,
+      asn: cf?.asn ?? null,
+      method: c.req.method,
+      path: c.req.path,
+      ua: c.req.header("user-agent") ?? null,
+      referer: c.req.header("referer") ?? null,
+      limit,
+    })
+  );
+  return c.json(
+    {
+      error: "Rate limit exceeded",
+      code: "RATE_LIMITED",
+      message: "Sign in or upgrade your plan for higher limits.",
+      upgrade: "/pricing",
+      limit,
+    },
+    429
+  );
 }
 
 /** Returns ISO date string for N days from now. */

@@ -16,6 +16,11 @@ const parser = new RSSParser({
 
 const FETCH_TIMEOUT_MS = 30_000;
 
+/** How feed URLs are actually fetched. Lets the caller route RSSHub URLs to a
+ *  bound container instead of the public network. Defaults to global fetch. */
+export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
+const defaultFetch: FetchFn = (url, init) => fetch(url, init);
+
 export interface SourceConfig {
   name: string;
   url: string;
@@ -25,13 +30,14 @@ export interface SourceConfig {
 }
 
 export async function fetchAllSources(
-  sources: SourceConfig[]
+  sources: SourceConfig[],
+  fetchFn: FetchFn = defaultFetch
 ): Promise<EntryCreate[]> {
   const allEntries: EntryCreate[] = [];
 
   for (const source of sources) {
     try {
-      const entries = await fetchSource(source);
+      const entries = await fetchSource(source, fetchFn);
       allEntries.push(...entries);
       console.log(`  ✓ ${source.name}: ${entries.length} entries`);
     } catch (err) {
@@ -42,14 +48,14 @@ export async function fetchAllSources(
   return allEntries;
 }
 
-async function fetchSource(source: SourceConfig): Promise<EntryCreate[]> {
+async function fetchSource(source: SourceConfig, fetchFn: FetchFn): Promise<EntryCreate[]> {
   // Fetch the feed with the platform fetch (Workers has no Node http client),
   // then parse the XML string with rss-parser.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let xml: string;
   try {
-    const res = await fetch(source.requestUrl, {
+    const res = await fetchFn(source.requestUrl, {
       headers: { "User-Agent": "DaAnDuKu-Ingestion/2.0" },
       signal: controller.signal,
     });
