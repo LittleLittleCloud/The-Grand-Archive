@@ -14,8 +14,8 @@ interface TierConfig {
 // Workers the current time is frozen at the Unix epoch during module init.
 const TIER_CONFIGS: Record<Tier, TierConfig> = {
   anonymous: { rateLimit: 10, maxAgeDays: 28 },
-  free: { rateLimit: 60, maxAgeDays: 90 },
-  premium: { rateLimit: 120, maxAgeDays: null },
+  free: { rateLimit: 30, maxAgeDays: 28 },
+  premium: { rateLimit: 120, maxAgeDays: 90 },
 };
 
 /**
@@ -92,6 +92,24 @@ export function tierMiddleware() {
             .bind(userId)
             .run();
         } else {
+          const ip = c.req.header("cf-connecting-ip") ?? "?";
+          const cf = (c.req.raw as unknown as { cf?: Record<string, unknown> }).cf;
+          console.warn(
+            JSON.stringify({
+              evt: "rate_limited",
+              key,
+              tier,
+              userId: userId ?? null,
+              ip,
+              country: cf?.country ?? null,
+              asn: cf?.asn ?? null,
+              method: c.req.method,
+              path: c.req.path,
+              ua: c.req.header("user-agent") ?? null,
+              referer: c.req.header("referer") ?? null,
+              limit: effectiveLimit,
+            })
+          );
           return c.json(
             {
               error: "Rate limit exceeded",
