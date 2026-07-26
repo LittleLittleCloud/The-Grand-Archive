@@ -79,7 +79,7 @@ const agentsHandler = (c: any) => {
 
 ## Quick Start
 
-No SDK or CLI installation required. Just use HTTP requests.
+Every operation this API supports — search, browsing, stats — is a plain HTTP GET. Use \`curl\` (or your HTTP client's direct equivalent) against the REST endpoints below, building the exact query string you need from the parameter tables.
 
 \`\`\`bash
 # Search for news
@@ -116,6 +116,12 @@ Full-text search across all entries. Supports fuzzy and prefix matching.
 curl "${base}/api/search?q=oil+prices&category=finance&from=2026-04-01&limit=10"
 \`\`\`
 
+Build your own query string with the same shape — e.g. for \`q=AI\` over the last week:
+
+\`\`\`bash
+curl "${base}/api/search?q=AI&from=2026-07-19&to=2026-07-26&limit=20"
+\`\`\`
+
 **Response:**
 
 \`\`\`json
@@ -136,6 +142,8 @@ curl "${base}/api/search?q=oil+prices&category=finance&from=2026-04-01&limit=10"
   "tierCutoff": "2026-03-28"
 }
 \`\`\`
+
+Note: \`/api/search\` results do not include \`url\` or \`content\`. To get the article link and full body, call \`/api/feeds/:id\` with the \`id\` from a search result.
 
 ### GET /api/feeds
 
@@ -182,7 +190,7 @@ curl "${base}/api/feeds?category=tech&limit=5"
 
 ### GET /api/feeds/:id
 
-Get a single entry by ID.
+Get a single entry by ID, including its full \`content\` and source \`url\`.
 
 \`\`\`bash
 curl "${base}/api/feeds/ENTRY_ID"
@@ -261,11 +269,13 @@ If rate-limited, you receive HTTP 429 with a JSON body.
 
 ## Tips for AI Agents
 
-1. **Start with stats** — call \`/api/stats\` first to understand available data volume and sources.
-2. **Use date filters** — narrow results with \`from\` and \`to\` to stay within your tier's history window.
-3. **Combine filters** — use \`category\` + \`source\` + date range for precise queries.
-4. **Paginate** — use \`offset\` to retrieve more than the first page of results.
-5. **Check tier info** — the \`tier\` and \`tierCutoff\` fields in search responses tell you your current access level.
+1. **Call the REST endpoints directly with \`curl\`.** No installation, no client library, no CLI — just an HTTP GET with the right query string.
+2. **Start with stats** — call \`/api/stats\` first to understand available data volume and sources.
+3. **Use date filters** — narrow results with \`from\` and \`to\` to stay within your tier's history window.
+4. **Combine filters** — use \`category\` + \`source\` + date range for precise queries.
+5. **Paginate** — use \`offset\` to retrieve more than the first page of results.
+6. **Check tier info** — the \`tier\` and \`tierCutoff\` fields in search responses tell you your current access level.
+7. **Get full content via \`/api/feeds/:id\`** — \`/api/search\` returns lightweight results without \`url\`/\`content\`; fetch each \`id\` you need via \`/api/feeds/:id\` for the article link and body.
 `;
   return c.text(md, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
