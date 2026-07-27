@@ -59,6 +59,14 @@ sources:
     tags: [地缘政治, 亚太, 深度]
     description: 亚太时事与地缘政治深度分析
 
+  - name: USCIS News
+    url: https://www.uscis.gov/news/rss-feed/59144
+    category: news
+    enabled: true
+    fetch_interval: 3600
+    tags: [美国, 移民, 政策]
+    description: 美国移民局 (USCIS) 官方新闻
+
   - name: 参考消息 · 第一关注
     url: "{{RSSHUB_BASE_URL}}/cankaoxiaoxi/column/diyi"
     category: news
