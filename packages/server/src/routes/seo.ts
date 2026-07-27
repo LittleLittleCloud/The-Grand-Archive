@@ -458,6 +458,7 @@ export function entryMetaMiddleware() {
       `<meta name="twitter:description" content="大案牍库追踪的 20+ 权威信息源，每 30 分钟更新">`,
     ].join("\n    ");
     html = html.replace(/<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/, metaTags);
+    c.header("Cache-Control", "public, max-age=300, s-maxage=1800, stale-while-revalidate=600");
     return c.html(html);
   });
 
