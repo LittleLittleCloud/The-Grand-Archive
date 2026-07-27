@@ -8,6 +8,7 @@ import { authRoutes } from "./routes/auth";
 import { seoRoutes, entryMetaMiddleware } from "./routes/seo";
 import { errorHandler } from "./middleware/error";
 import { tierMiddleware } from "./middleware/tier";
+import { llmAgentMiddleware } from "./middleware/llm-agent";
 import { createAuth } from "./auth/better-auth";
 import type { HonoEnv } from "./types";
 
@@ -22,6 +23,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 });
 
 // Tier middleware for API routes (session + API key + rate limit)
+app.use("/api/*", llmAgentMiddleware());
 app.use("/api/*", tierMiddleware());
 app.onError(errorHandler);
 
