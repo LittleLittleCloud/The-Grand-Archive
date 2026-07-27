@@ -7,5 +7,6 @@ declare module "hono" {
     apiKeyId: string | undefined;
     tier: Tier;
     maxAge: string | null;
+    llmAgent: boolean;
   }
 }

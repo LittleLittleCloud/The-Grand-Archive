@@ -127,25 +127,10 @@ export function tierMiddleware() {
   };
 }
 
-/** Log a rate_limited event and return the 429 response. */
-function rejectRateLimited(c: Context<HonoEnv>, tier: Tier, key: string, limit: number) {
-  const cf = (c.req.raw as unknown as { cf?: Record<string, unknown> }).cf;
-  console.warn(
-    JSON.stringify({
-      evt: "rate_limited",
-      key,
-      tier,
-      userId: (c.get("userId") as string | undefined) ?? null,
-      ip: c.req.header("cf-connecting-ip") ?? "?",
-      country: cf?.country ?? null,
-      asn: cf?.asn ?? null,
-      method: c.req.method,
-      path: c.req.path,
-      ua: c.req.header("user-agent") ?? null,
-      referer: c.req.header("referer") ?? null,
-      limit,
-    })
-  );
+/** Return the 429 response. Kept minimal — no logging — so that legitimate
+ *  over-limit callers (e.g. high-volume anonymous API clients) are rejected as
+ *  cheaply as possible. */
+function rejectRateLimited(c: Context<HonoEnv>, _tier: Tier, _key: string, limit: number) {
   return c.json(
     {
       error: "Rate limit exceeded",

@@ -81,9 +81,11 @@ const agentsHandler = (c: any) => {
 
 Every operation this API supports — search, browsing, stats — is a plain HTTP GET. Use \`curl\` (or your HTTP client's direct equivalent) against the REST endpoints below, building the exact query string you need from the parameter tables.
 
+> **If you are an LLM / AI agent, set the \`llm.agent: true\` request header on every call.** This helps us understand automated usage. Human-driven clients should send \`llm.agent: false\` (or omit the header).
+
 \`\`\`bash
-# Search for news
-curl "${base}/api/search?q=tariff&limit=5"
+# Search for news (identify as an LLM agent)
+curl -H "llm.agent: true" "${base}/api/search?q=tariff&limit=5"
 
 # Browse recent entries
 curl "${base}/api/feeds?category=finance&limit=10"
@@ -240,8 +242,12 @@ Get per-source ingestion status with daily activity bins.
 **API Key:** Sign up at [${host}/signup](${base}/signup), then create an API key at [${host}/api-keys](${base}/api-keys). Pass it via header:
 
 \`\`\`bash
-curl -H "Authorization: Bearer YOUR_API_KEY" "${base}/api/search?q=inflation"
+curl -H "Authorization: Bearer YOUR_API_KEY" -H "llm.agent: true" "${base}/api/search?q=inflation"
 \`\`\`
+
+### Identifying LLM Agents
+
+So we can measure how much traffic is automated, **every request made by an LLM / AI agent must include the header \`llm.agent: true\`.** Requests originating from a human should use \`llm.agent: false\` or omit the header entirely. This header is purely for analytics and does not affect your access tier or rate limit.
 
 ### Rate Limit Headers
 
@@ -270,12 +276,13 @@ If rate-limited, you receive HTTP 429 with a JSON body.
 ## Tips for AI Agents
 
 1. **Call the REST endpoints directly with \`curl\`.** No installation, no client library, no CLI — just an HTTP GET with the right query string.
-2. **Start with stats** — call \`/api/stats\` first to understand available data volume and sources.
-3. **Use date filters** — narrow results with \`from\` and \`to\` to stay within your tier's history window.
-4. **Combine filters** — use \`category\` + \`source\` + date range for precise queries.
-5. **Paginate** — use \`offset\` to retrieve more than the first page of results.
-6. **Check tier info** — the \`tier\` and \`tierCutoff\` fields in search responses tell you your current access level.
-7. **Get full content via \`/api/feeds/:id\`** — \`/api/search\` returns lightweight results without \`url\`/\`content\`; fetch each \`id\` you need via \`/api/feeds/:id\` for the article link and body.
+2. **Always send \`llm.agent: true\`** — include this header on every request so your automated usage is counted correctly.
+3. **Start with stats** — call \`/api/stats\` first to understand available data volume and sources.
+4. **Use date filters** — narrow results with \`from\` and \`to\` to stay within your tier's history window.
+5. **Combine filters** — use \`category\` + \`source\` + date range for precise queries.
+6. **Paginate** — use \`offset\` to retrieve more than the first page of results.
+7. **Check tier info** — the \`tier\` and \`tierCutoff\` fields in search responses tell you your current access level.
+8. **Get full content via \`/api/feeds/:id\`** — \`/api/search\` returns lightweight results without \`url\`/\`content\`; fetch each \`id\` you need via \`/api/feeds/:id\` for the article link and body.
 `;
   return c.text(md, 200, {
     "Content-Type": "text/markdown; charset=utf-8",
