@@ -46,6 +46,14 @@ beforeAll(() => {
 });
 
 describe("GET /api/feeds", () => {
+  test("status endpoint includes cache headers", async () => {
+    const res = await req("/api/feeds/status");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe(
+      "public, max-age=300, s-maxage=1800, stale-while-revalidate=600"
+    );
+  });
+
   test("returns all entries when no date filter", async () => {
     const res = await req("/api/feeds");
     expect(res.status).toBe(200);

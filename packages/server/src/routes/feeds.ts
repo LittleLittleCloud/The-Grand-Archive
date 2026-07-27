@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { HonoEnv } from "../types";
 
 export const feedsRoutes = new OpenAPIHono<HonoEnv>();
+const FEEDS_STATUS_CACHE_CONTROL = "public, max-age=300, s-maxage=1800, stale-while-revalidate=600";
 
 feedsRoutes.get("/feeds/status", async (c) => {
   const db = c.env.DB;
@@ -47,6 +48,7 @@ feedsRoutes.get("/feeds/status", async (c) => {
       .all<{ source: string; day: string; count: number }>()
   ).results;
 
+  c.header("Cache-Control", FEEDS_STATUS_CACHE_CONTROL);
   return c.json({ feeds, dailyBins });
 });
 
