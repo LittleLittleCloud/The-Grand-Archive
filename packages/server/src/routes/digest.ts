@@ -236,3 +236,54 @@ digestRoutes.get("/digest/editions/:date/:lang", async (c) => {
     created_at: row.created_at,
   });
 });
+
+// ─── Admin: trigger a digest run from the UI ────────────
+// Gated by INGEST_ALLOWED_USERS (same admin list as ingest). The server calls
+// the digest worker's token-guarded /run endpoint, which starts the Workflow.
+
+function isDigestAdmin(c: Context<HonoEnv>): boolean {
+  const allowed = (c.env.INGEST_ALLOWED_USERS ?? "").split(",").filter(Boolean);
+  const userId = c.get("userId") as string | undefined;
+  return !!userId && allowed.includes(userId);
+}
+
+/** Capability check so the UI can show/hide the admin control. */
+digestRoutes.get("/admin/digest", (c) => {
+  return c.json({ canTrigger: isDigestAdmin(c) });
+});
+
+/** Kick off a digest run (defaults to today, both languages). */
+digestRoutes.post("/admin/digest/run", async (c) => {
+  if (!isDigestAdmin(c)) {
+    return c.json({ error: "Forbidden", code: "NOT_ALLOWED" }, 403);
+  }
+
+  const base = c.env.DIGEST_WORKER_URL;
+  const token = c.env.DIGEST_TRIGGER_TOKEN;
+  if (!base || !token) {
+    return c.json(
+      { error: "Digest trigger not configured", code: "NOT_CONFIGURED" },
+      503
+    );
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { date?: string; lang?: string };
+  const target = new URL(`${base.replace(/\/$/, "")}/run`);
+  if (body.date) target.searchParams.set("date", body.date);
+  if (body.lang === "en" || body.lang === "zh") target.searchParams.set("lang", body.lang);
+
+  try {
+    const res = await fetch(target.toString(), {
+      method: "GET",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return c.json({ error: "Digest worker rejected the run", code: "TRIGGER_FAILED" }, 502);
+    }
+    return c.json(data as Record<string, unknown>);
+  } catch {
+    return c.json({ error: "Could not reach the digest worker", code: "TRIGGER_UNREACHABLE" }, 502);
+  }
+});
+

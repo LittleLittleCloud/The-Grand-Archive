@@ -26,13 +26,84 @@ export function SettingsPage() {
         <ProfileSection user={user} />
         <div className="mt-10" />
         <ApiKeysSection />
+        <div className="mt-10" />
+        <DigestAdminSection />
       </main>
     </div>
   );
 }
 
-/* ─── Profile Section ─── */
+/* ─── Digest Admin Section (visible only to INGEST_ALLOWED_USERS) ─── */
+function DigestAdminSection() {
+  const [canTrigger, setCanTrigger] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
+  useEffect(() => {
+    api
+      .getDigestAdmin()
+      .then((r) => setCanTrigger(r.canTrigger))
+      .catch(() => setCanTrigger(false));
+  }, []);
+
+  if (!canTrigger) return null;
+
+  async function run() {
+    setRunning(true);
+    setMsg(null);
+    setErr(null);
+    try {
+      const r = await api.runDigest();
+      setMsg(
+        r.id
+          ? `Run started (${r.id}). Editions appear at /digest in a few minutes.`
+          : "Run started."
+      );
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Failed to start the run.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <section>
+      <h2
+        className="font-display text-xl font-bold text-primary mb-6"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        Admin · DAK Daily
+      </h2>
+      <div className="bg-surface-low p-6" style={{ boxShadow: "var(--shadow-whisper)" }}>
+        <p className="text-on-surface-variant mb-5" style={{ fontFamily: "var(--font-body)" }}>
+          Generate today&rsquo;s editions (English + Chinese) now. This normally runs
+          automatically at 08:00 UTC.
+        </p>
+        <button
+          onClick={run}
+          disabled={running}
+          className="px-5 py-2.5 bg-primary text-on-primary font-medium disabled:opacity-60"
+          style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
+        >
+          {running ? "Starting…" : "Generate today’s edition"}
+        </button>
+        {msg && (
+          <p className="mt-4 text-sm" style={{ fontFamily: "var(--font-body)", color: "#2f5233" }}>
+            {msg}
+          </p>
+        )}
+        {err && (
+          <p className="mt-4 text-sm" style={{ fontFamily: "var(--font-body)", color: "#7a2e2e" }}>
+            {err}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Profile Section ─── */
 function ProfileSection({
   user,
 }: {

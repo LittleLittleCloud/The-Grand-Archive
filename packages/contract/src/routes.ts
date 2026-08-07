@@ -21,6 +21,8 @@ export const ROUTES = {
   DIGEST_UNSUBSCRIBE: "/api/digest/unsubscribe",
   DIGEST_EDITIONS: "/api/digest/editions",
   DIGEST_EDITION_BY_DATE_LANG: "/api/digest/editions/:date/:lang",
+  DIGEST_ADMIN: "/api/admin/digest",
+  DIGEST_ADMIN_RUN: "/api/admin/digest/run",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];

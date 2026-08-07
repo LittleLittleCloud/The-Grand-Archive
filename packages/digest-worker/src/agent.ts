@@ -30,6 +30,45 @@ function finalAssistantText(agent: any): string {
   return "";
 }
 
+/**
+ * Log a concise trace of the agent run — tool calls, tool results, assistant
+ * turns — to the worker logs (visible in the `dak: digest` dev terminal locally
+ * and via `wrangler tail` in prod). Returns the unsubscribe fn.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function traceAgent(agent: any, label: string): () => void {
+  let turn = 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return agent.subscribe((event: any) => {
+    switch (event.type) {
+      case "turn_start":
+        console.log(`[${label}] turn ${++turn}`);
+        break;
+      case "tool_execution_start":
+        console.log(`[${label}] → ${event.toolName}(${JSON.stringify(event.args ?? {})})`);
+        break;
+      case "tool_execution_end": {
+        const text =
+          event.result?.content?.find((b: any) => b?.type === "text")?.text ?? "";
+        const err = event.result?.isError ? " ERROR" : "";
+        console.log(
+          `[${label}] ← ${event.toolName ?? event.toolCallId}${err} (${String(text).length} chars)`
+        );
+        break;
+      }
+      case "message_end":
+        if (event.message?.role === "assistant") {
+          const t = messageText(event.message).trim();
+          if (t) console.log(`[${label}] assistant: ${t.slice(0, 200)}${t.length > 200 ? "…" : ""}`);
+        }
+        break;
+      case "agent_end":
+        console.log(`[${label}] done — ${turn} turn(s)`);
+        break;
+    }
+  });
+}
+
 /** STEP 1 — the pi agent researches the day and returns a story brief. */
 export async function gatherBrief(env: Bindings, date: string): Promise<ResearchBrief> {
   const llm = createLlm(env);
@@ -42,13 +81,20 @@ export async function gatherBrief(env: Bindings, date: string): Promise<Research
     streamFn: llm.streamFn,
   });
 
-  await agent.prompt(
-    `Today is ${date} (UTC). Survey the last 24 hours of news and select the day's stories. ` +
-      `Start by calling list_recent for the main categories, then dig in where a story looks important.`
-  );
+  // Attach the trace before prompting so every tool call / turn is logged.
+  const untrace = traceAgent(agent, "gather");
+  try {
+    await agent.prompt(
+      `Today is ${date} (UTC). Survey the last 24 hours of news and select the day's stories. ` +
+        `Start by calling list_recent for the main categories, then dig in where a story looks important.`
+    );
+  } finally {
+    untrace();
+  }
 
   const parsed = extractJson<{ items: BriefItem[] }>(finalAssistantText(agent));
   const items = Array.isArray(parsed?.items) ? parsed!.items.slice(0, 24) : [];
+  console.log(`[gather] selected ${items.length} stories for ${date}`);
   return { date, items };
 }
 

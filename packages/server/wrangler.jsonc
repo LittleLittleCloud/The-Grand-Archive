@@ -25,7 +25,8 @@
   "vars": {
     "SEARCH_ENGINE": "fts5",
     "BETTER_AUTH_URL": "https://dak-news.com",
-    "TRUSTED_ORIGINS": "https://*.workers.dev"
+    "TRUSTED_ORIGINS": "https://*.workers.dev",
+    "DIGEST_WORKER_URL": "https://dak-digest-worker.g2260578356.workers.dev"
   },
   "observability": {
     "enabled": true,

@@ -35,6 +35,11 @@ export interface Bindings {
   INGEST_ALLOWED_USERS?: string;
   EMAIL_FROM?: string;
 
+  // Digest worker trigger (admin "generate now" button). The server calls the
+  // digest worker's token-guarded /run endpoint.
+  DIGEST_WORKER_URL?: string;
+  DIGEST_TRIGGER_TOKEN?: string;
+
   // Secrets
   BETTER_AUTH_SECRET?: string;
   GITHUB_CLIENT_ID?: string;

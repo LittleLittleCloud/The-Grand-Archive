@@ -120,4 +120,14 @@ export const api = {
         encodeURIComponent(lang)
       )
     ),
+
+  // ─── Digest admin (INGEST_ALLOWED_USERS) ──────────────
+
+  getDigestAdmin: () => request<{ canTrigger: boolean }>(ROUTES.DIGEST_ADMIN),
+
+  runDigest: (params?: { date?: string; lang?: DigestLang }) =>
+    request<{ id?: string }>(ROUTES.DIGEST_ADMIN_RUN, {
+      method: "POST",
+      body: JSON.stringify(params ?? {}),
+    }),
 };
