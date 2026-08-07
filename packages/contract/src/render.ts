@@ -22,6 +22,7 @@ const SANS = "'Inter', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif";
 interface Strings {
   tagline: string;
   inThisIssue: string;
+  tldr: string;
   readMore: string;
   viewInBrowser: string;
   unsubscribe: string;
@@ -34,6 +35,7 @@ const STRINGS: Record<DigestLang, Strings> = {
     masthead: "The Grand Archive",
     tagline: "DAK Daily",
     inThisIssue: "In this issue",
+    tldr: "At a glance",
     readMore: "Read the full story →",
     viewInBrowser: "View in browser",
     unsubscribe: "Unsubscribe",
@@ -41,12 +43,13 @@ const STRINGS: Record<DigestLang, Strings> = {
   },
   zh: {
     masthead: "大案牍库",
-    tagline: "大案牍日报",
+    tagline: "大案牍库日报",
     inThisIssue: "本期要目",
+    tldr: "本期要点",
     readMore: "阅读全文 →",
     viewInBrowser: "在浏览器中查看",
     unsubscribe: "退订",
-    unsubscribeNote: "您收到本邮件是因为您订阅了大案牍日报。",
+    unsubscribeNote: "您收到本邮件是因为您订阅了大案牍库日报。",
   },
 };
 
@@ -93,58 +96,86 @@ export function formatDateLabel(date: string, lang: DigestLang): string {
 export function renderEditionArticle(content: DigestContent, lang: DigestLang): string {
   const t = STRINGS[lang] ?? STRINGS.en;
 
-  // "In this issue" index rail — a newspaper-style table of contents.
-  const index =
-    content.sections.length > 1
+  const subtitle = content.subtitle
+    ? `<p style="font-family:${SERIF};font-size:20px;line-height:1.4;font-weight:600;color:${INK};margin:0 0 14px 0;">${escapeHtml(content.subtitle)}</p>`
+    : "";
+
+  const standfirst = `<p style="font-family:${SERIF};font-size:19px;font-style:italic;line-height:1.6;color:${INK_SOFT};margin:0 0 24px 0;border-left:4px solid ${ACCENT};padding-left:16px;">${escapeHtml(content.standfirst)}</p>`;
+
+  // TL;DR highlights box (newspaper-brief "highlights").
+  const highlights =
+    content.highlights && content.highlights.length
       ? `
-      <div style="border-top:2px solid ${INK};border-bottom:2px solid ${INK};padding:10px 0;margin:0 0 26px 0;">
-        <div style="font-family:${SANS};font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:${ACCENT};margin:0 0 6px 0;">${escapeHtml(t.inThisIssue)}</div>
-        <div style="font-family:${SERIF};font-size:15px;line-height:1.5;color:${INK};">${content.sections
-          .map((s) => escapeHtml(s.heading))
-          .join(' &nbsp;&middot;&nbsp; ')}</div>
+      <div style="border:2px solid ${INK};background:${PARCHMENT_DIM};padding:14px 18px;margin:0 0 28px 0;">
+        <div style="font-family:${SANS};font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:${ACCENT};margin:0 0 8px 0;">${escapeHtml(t.tldr)}</div>
+        <ul style="margin:0;padding-left:18px;">${content.highlights
+          .map(
+            (h) =>
+              `<li style="font-family:${SANS};font-size:14px;line-height:1.6;color:${INK_SOFT};margin:0 0 6px 0;">${escapeHtml(h)}</li>`
+          )
+          .join("")}</ul>
       </div>`
       : "";
 
   const sections = content.sections
     .map((section) => {
+      const body = section.body
+        ? `<p style="font-family:${SANS};font-size:14px;line-height:1.7;color:${INK_SOFT};text-align:justify;margin:0 0 12px 0;">${escapeHtml(section.body)}</p>`
+        : "";
       const items = section.items
         .map((item) => {
           const href = safeUrl(item.url);
-          const titleHtml = href
-            ? `<a href="${escapeHtml(href)}" style="color:${INK};text-decoration:none;border-bottom:1px solid ${GOLD};">${escapeHtml(item.title)}</a>`
-            : escapeHtml(item.title);
-          const source = item.source
-            ? `<span style="font-family:${SANS};font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${ACCENT};">${escapeHtml(item.source)}</span>`
-            : "";
-          const more = href
-            ? `<div style="margin-top:6px;"><a href="${escapeHtml(href)}" style="font-family:${SANS};font-size:12px;letter-spacing:0.04em;color:${MUTED};text-decoration:none;">${escapeHtml(t.readMore)}</a></div>`
-            : "";
-          return `
-            <div style="margin:0 0 20px 0;">
-              ${source}
-              <h3 style="font-family:${SERIF};font-weight:600;font-size:18px;line-height:1.3;margin:2px 0 6px 0;color:${INK};">${titleHtml}</h3>
-              <p style="font-family:${SANS};font-size:14px;line-height:1.7;margin:0;color:${INK_SOFT};text-align:justify;">${escapeHtml(item.summary)}</p>
-              ${more}
-            </div>`;
+          let attribution = "";
+          if (item.source) {
+            attribution = href
+              ? ` <a href="${escapeHtml(href)}" style="color:${ACCENT};text-decoration:none;border-bottom:1px solid ${GOLD};">— ${escapeHtml(item.source)}</a>`
+              : ` <span style="color:${ACCENT};">— ${escapeHtml(item.source)}</span>`;
+          } else if (href) {
+            attribution = ` <a href="${escapeHtml(href)}" style="color:${ACCENT};text-decoration:none;border-bottom:1px solid ${GOLD};">${escapeHtml(t.readMore)}</a>`;
+          }
+          return `<li style="font-family:${SANS};font-size:14px;line-height:1.7;color:${INK_SOFT};margin:0 0 10px 0;">${escapeHtml(item.text)}${attribution}</li>`;
         })
         .join("");
-      const blurb = section.blurb
-        ? `<p style="font-family:${SANS};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${ACCENT};margin:0 0 14px 0;">${escapeHtml(section.blurb)}</p>`
-        : "";
+      const list = items ? `<ul style="margin:0;padding-left:18px;">${items}</ul>` : "";
       return `
         <section style="margin:26px 0 0 0;border-top:2px solid ${INK};padding-top:16px;">
           <h2 style="font-family:${SERIF};font-weight:700;font-size:22px;line-height:1.2;letter-spacing:-0.01em;margin:0 0 10px 0;color:${INK};">${escapeHtml(section.heading)}</h2>
-          ${blurb}
-          ${items}
+          ${body}
+          ${list}
         </section>`;
     })
     .join("");
 
+  let quote = "";
+  if (content.quote && content.quote.text) {
+    const q = content.quote;
+    const href = safeUrl(q.url);
+    const src = q.source
+      ? `<footer style="font-family:${SANS};font-size:12px;letter-spacing:0.04em;color:${MUTED};margin-top:8px;">— ${
+          href
+            ? `<a href="${escapeHtml(href)}" style="color:${MUTED};">${escapeHtml(q.source)}</a>`
+            : escapeHtml(q.source)
+        }</footer>`
+      : "";
+    quote = `
+      <blockquote style="margin:30px 0 0 0;border-left:4px solid ${INK};padding:4px 0 4px 18px;">
+        <p style="font-family:${SERIF};font-style:italic;font-size:21px;line-height:1.5;color:${INK};margin:0;">“${escapeHtml(q.text)}”</p>
+        ${src}
+      </blockquote>`;
+  }
+
+  const footer = content.footerNote
+    ? `<p style="font-family:${SANS};font-size:12px;line-height:1.6;color:${MUTED};margin:26px 0 0 0;">${escapeHtml(content.footerNote)}</p>`
+    : "";
+
   return `
     <div style="max-width:660px;margin:0 auto;">
-      <p style="font-family:${SERIF};font-size:19px;font-style:italic;line-height:1.6;color:${INK_SOFT};margin:0 0 22px 0;border-left:4px solid ${ACCENT};padding-left:16px;">${escapeHtml(content.standfirst)}</p>
-      ${index}
+      ${subtitle}
+      ${standfirst}
+      ${highlights}
       ${sections}
+      ${quote}
+      ${footer}
     </div>`;
 }
 

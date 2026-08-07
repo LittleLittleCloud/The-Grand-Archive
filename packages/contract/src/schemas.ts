@@ -149,27 +149,37 @@ export const FeedsStatusResponseSchema = z.object({
 /** Languages a digest edition can be produced in. */
 export const DigestLangSchema = z.enum(["en", "zh"]);
 
-/** One story inside a section of a newspaper edition. */
+/** An attributed point within a section (a "bullet" with its source). */
 export const DigestItemSchema = z.object({
-  title: z.string(),
-  summary: z.string(),
-  url: z.string().nullable().optional(),
+  text: z.string(),
   source: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
   entryId: z.string().nullable().optional(),
 });
 
-/** A themed section (e.g. Finance, Tech) of a newspaper edition. */
+/** A pull-quote with optional attribution. */
+export const DigestQuoteSchema = z.object({
+  text: z.string(),
+  source: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
+});
+
+/** A themed section: optional editorial prose plus attributed points. */
 export const DigestSectionSchema = z.object({
   heading: z.string(),
-  blurb: z.string().nullable().optional(),
-  items: z.array(DigestItemSchema),
+  body: z.string().nullable().optional(),
+  items: z.array(DigestItemSchema).default([]),
 });
 
 /** Structured content the agent produces and the renderer consumes. */
 export const DigestContentSchema = z.object({
   title: z.string(),
+  subtitle: z.string().nullable().optional(),
   standfirst: z.string(),
+  highlights: z.array(z.string()).default([]),
+  quote: DigestQuoteSchema.nullable().optional(),
   sections: z.array(DigestSectionSchema),
+  footerNote: z.string().nullable().optional(),
 });
 
 /** POST /api/digest/subscribe */

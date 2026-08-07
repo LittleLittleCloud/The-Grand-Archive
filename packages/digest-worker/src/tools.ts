@@ -44,7 +44,7 @@ export function createTools(db: D1Database): Tool[] {
     execute: async (_id, params) => {
       const p = params as { category?: string; hours?: number; limit?: number };
       const hours = Math.min(Math.max(Number(p.hours) || 24, 1), 72);
-      const limit = Math.min(Math.max(Number(p.limit) || 30, 1), 60);
+      const limit = Math.min(Math.max(Number(p.limit) || 14, 1), 25);
       const clauses = ["published >= datetime('now', ?)"];
       const binds: (string | number)[] = [`-${hours} hours`];
       if (p.category) {
@@ -56,7 +56,7 @@ export function createTools(db: D1Database): Tool[] {
         (
           await db
             .prepare(
-              `SELECT id, title, url, source, category, published, substr(content, 1, 400) AS snippet
+              `SELECT id, title, url, source, category, published
                FROM entries WHERE ${clauses.join(" AND ")} ORDER BY published DESC LIMIT ?`
             )
             .bind(...binds)
@@ -79,13 +79,13 @@ export function createTools(db: D1Database): Tool[] {
       const p = params as { query?: string; limit?: number };
       const query = String(p.query ?? "").trim();
       if (!query) return textResult([]);
-      const limit = Math.min(Math.max(Number(p.limit) || 20, 1), 40);
+      const limit = Math.min(Math.max(Number(p.limit) || 10, 1), 20);
       const like = `%${query}%`;
       const rows =
         (
           await db
             .prepare(
-              `SELECT id, title, url, source, category, published, substr(content, 1, 400) AS snippet
+              `SELECT id, title, url, source, category, published, substr(content, 1, 200) AS snippet
                FROM entries
                WHERE (title LIKE ? OR content LIKE ?) AND published >= datetime('now', '-4 days')
                ORDER BY published DESC LIMIT ?`

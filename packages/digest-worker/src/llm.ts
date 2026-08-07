@@ -1,85 +1,92 @@
-import { createModels } from "@earendil-works/pi-ai";
-import { cloudflareAIGatewayProvider } from "@earendil-works/pi-ai/providers/cloudflare-ai-gateway";
 import type { Bindings } from "./types";
 
-// pi-ai reaches the model over REST via the Cloudflare AI Gateway provider. It
-// does NOT use the Workers `ai` binding — creds are passed per-request through
-// the `env` stream option (there is no process.env on Workers).
+// Single-completion client for a Workers AI chat model, called through the
+// Cloudflare AI Gateway with a HARD, runtime-enforced timeout.
+//
+// We deliberately use a direct `fetch` (not the pi-ai SDK) because only
+// `fetch` + `AbortSignal.timeout` reliably bounds a model call inside a
+// Cloudflare Workflow step: JS timers (setTimeout / Promise.race) do NOT fire
+// while a provider `await` is pending in a step, and the SDK did not forward
+// the abort signal to its underlying request — so a slow model hung the step
+// forever. A direct fetch is aborted by the runtime's I/O layer, guaranteeing
+// the caller can fall back to a deterministic edition.
 
 const DEFAULT_MODEL = "workers-ai/@cf/moonshotai/kimi-k2.6";
 
-// Cap any single model call so a stalled provider/stream becomes a clean error
-// (which the Workflow step retries) instead of hanging the Worker isolate
-// — the Workers runtime cancels "hung" requests that never resolve.
+/** Hard cap on a single model call. On timeout the fetch is aborted and the
+ *  caller (draftEdition) falls back to a deterministic edition. */
 const LLM_TIMEOUT_MS = 120_000;
 
-/** Combine an optional caller signal with our timeout signal. */
-function withTimeoutSignal(callerSignal?: AbortSignal): AbortSignal {
-  const timeout = AbortSignal.timeout(LLM_TIMEOUT_MS);
-  if (!callerSignal) return timeout;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const any = (AbortSignal as any).any;
-  return typeof any === "function" ? any([callerSignal, timeout]) : timeout;
+export interface LlmMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyModel = any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyContext = any;
+export interface LlmContext {
+  systemPrompt: string;
+  messages: LlmMessage[];
+}
 
 export interface Llm {
-  model: AnyModel;
-  /** streamFn wired for pi's Agent (injects gateway creds). */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  streamFn: (model: AnyModel, context: AnyContext, options?: any) => any;
-  /** One-shot completion, returns the assistant's text. */
-  complete: (context: AnyContext) => Promise<string>;
+  /** One-shot completion, returns the assistant's text (or throws on
+   *  timeout / transport / HTTP error). */
+  complete: (context: LlmContext) => Promise<string>;
 }
 
-/** Extract concatenated text content from a pi-ai assistant message. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function messageText(msg: any): string {
-  const content = msg?.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .filter((b) => b?.type === "text" && typeof b.text === "string")
-      .map((b) => b.text)
-      .join("\n");
-  }
-  return "";
+interface WorkersAiResponse {
+  result?: { response?: string };
+  response?: string;
+  choices?: { message?: { content?: string } }[];
 }
 
-export function createLlm(env: Bindings): Llm {
-  const models = createModels();
-  models.setProvider(cloudflareAIGatewayProvider());
+export function createLlm(env: Bindings, modelIdOverride?: string): Llm {
+  const modelId = modelIdOverride ?? env.DIGEST_MODEL ?? DEFAULT_MODEL;
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+  const gatewayId = env.CLOUDFLARE_GATEWAY_ID;
+  const apiKey = env.CLOUDFLARE_API_KEY;
 
-  const modelId = env.DIGEST_MODEL ?? DEFAULT_MODEL;
-  const model = models.getModel("cloudflare-ai-gateway", modelId);
-  if (!model) {
-    throw new Error(`digest: model not found in cloudflare-ai-gateway catalog: ${modelId}`);
-  }
+  const complete = async (context: LlmContext): Promise<string> => {
+    if (!accountId || !gatewayId || !apiKey) {
+      throw new Error(
+        "digest: missing CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_GATEWAY_ID / CLOUDFLARE_API_KEY"
+      );
+    }
 
-  const creds: Record<string, string> = {};
-  if (env.CLOUDFLARE_API_KEY) creds.CLOUDFLARE_API_KEY = env.CLOUDFLARE_API_KEY;
-  if (env.CLOUDFLARE_ACCOUNT_ID) creds.CLOUDFLARE_ACCOUNT_ID = env.CLOUDFLARE_ACCOUNT_ID;
-  if (env.CLOUDFLARE_GATEWAY_ID) creds.CLOUDFLARE_GATEWAY_ID = env.CLOUDFLARE_GATEWAY_ID;
+    // modelId already carries the "workers-ai/<model>" provider prefix the
+    // gateway path expects, e.g. workers-ai/@cf/moonshotai/kimi-k2.6.
+    const url = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/${modelId}`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const streamFn = (m: AnyModel, context: AnyContext, options: any = {}) =>
-    models.streamSimple(m, context, {
-      ...options,
-      env: creds,
-      signal: withTimeoutSignal(options.signal),
-    });
+    const messages = [
+      { role: "system", content: context.systemPrompt },
+      ...context.messages.map((m) => ({ role: m.role, content: m.content })),
+    ];
 
-  const complete = async (context: AnyContext): Promise<string> => {
-    const msg = await models.completeSimple(model, context, {
-      env: creds,
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Upstream Workers AI auth + (in case the gateway is authenticated)
+        // the gateway auth. The same account API token satisfies both.
+        Authorization: `Bearer ${apiKey}`,
+        "cf-aig-authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ messages, max_tokens: 4096 }),
       signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     });
-    return messageText(msg);
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`digest: AI gateway ${res.status}: ${body.slice(0, 300)}`);
+    }
+
+    const data = (await res.json()) as WorkersAiResponse;
+    const text =
+      data.result?.response ??
+      data.response ??
+      data.choices?.[0]?.message?.content ??
+      "";
+    return typeof text === "string" ? text : "";
   };
 
-  return { model, streamFn, complete };
+  return { complete };
 }

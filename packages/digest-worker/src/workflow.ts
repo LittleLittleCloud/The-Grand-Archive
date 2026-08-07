@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, type WorkflowStep, type WorkflowEvent } from "cloudflare:workers";
 import type { DigestLang } from "@dak/contract";
-import { gatherBrief, draftEdition } from "./agent";
+import { gatherBrief, draftEdition, fallbackEdition } from "./agent";
 import { persistEdition } from "./store";
 import { sendEdition } from "./send";
 import type { Bindings, DigestWorkflowParams } from "./types";
@@ -23,7 +23,7 @@ export class DigestWorkflow extends WorkflowEntrypoint<Bindings, DigestWorkflowP
       "gather",
       {
         retries: { limit: 2, delay: "10 seconds", backoff: "exponential" },
-        timeout: "5 minutes",
+        timeout: "10 minutes",
       },
       async () => gatherBrief(this.env, date)
     );
@@ -32,14 +32,25 @@ export class DigestWorkflow extends WorkflowEntrypoint<Bindings, DigestWorkflowP
     const results: { lang: DigestLang; sections: number; recipients: number; sent: number }[] = [];
 
     for (const lang of langs) {
-      const content = await step.do(
-        `draft-${lang}`,
-        {
-          retries: { limit: 2, delay: "10 seconds", backoff: "exponential" },
-          timeout: "3 minutes",
-        },
-        async () => draftEdition(this.env, brief, lang, date)
-      );
+      // Give the model a bounded window (enforced server-side by the step
+      // timeout, which — unlike in-isolate timers — reliably fires even when
+      // the provider call hangs). If it fails or times out, fall back to a
+      // deterministic edition built straight from the brief so the run always
+      // persists a non-empty, attributed edition.
+      let content;
+      try {
+        content = await step.do(
+          `draft-${lang}`,
+          {
+            retries: { limit: 0, delay: "5 seconds", backoff: "constant" },
+            timeout: "3 minutes",
+          },
+          async () => draftEdition(this.env, brief, lang, date)
+        );
+      } catch (err) {
+        console.error(`[digest-wf] draft-${lang} failed, using deterministic fallback:`, err);
+        content = fallbackEdition(brief, lang, date);
+      }
 
       await step.do(`persist-${lang}`, async () => {
         await persistEdition(this.env.DB, date, lang, content);

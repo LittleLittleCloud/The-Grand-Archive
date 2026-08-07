@@ -22,6 +22,7 @@ import type {
   FeedsStatusResponseSchema,
   DigestLangSchema,
   DigestItemSchema,
+  DigestQuoteSchema,
   DigestSectionSchema,
   DigestContentSchema,
   DigestSubscribeRequestSchema,
@@ -53,6 +54,7 @@ export type DailyBin = z.infer<typeof DailyBinSchema>;
 export type FeedsStatusResponse = z.infer<typeof FeedsStatusResponseSchema>;
 export type DigestLang = z.infer<typeof DigestLangSchema>;
 export type DigestItem = z.infer<typeof DigestItemSchema>;
+export type DigestQuote = z.infer<typeof DigestQuoteSchema>;
 export type DigestSection = z.infer<typeof DigestSectionSchema>;
 export type DigestContent = z.infer<typeof DigestContentSchema>;
 export type DigestSubscribeRequest = z.input<typeof DigestSubscribeRequestSchema>;
