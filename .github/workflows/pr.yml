@@ -42,6 +42,7 @@ jobs:
           cd ../cli && bunx tsc --noEmit
           cd ../server && bunx tsc --noEmit
           cd ../ingestion-worker && bunx tsc --noEmit
+          cd ../digest-worker && bunx tsc --noEmit
 
       - name: Test
         run: |

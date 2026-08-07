@@ -14,6 +14,13 @@ export const ROUTES = {
 
   // Ingest (api-key-protected)
   ENTRIES: "/api/entries",
+
+  // Daily digest
+  DIGEST_SUBSCRIBE: "/api/digest/subscribe",
+  DIGEST_CONFIRM: "/api/digest/confirm",
+  DIGEST_UNSUBSCRIBE: "/api/digest/unsubscribe",
+  DIGEST_EDITIONS: "/api/digest/editions",
+  DIGEST_EDITION_BY_DATE_LANG: "/api/digest/editions/:date/:lang",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];

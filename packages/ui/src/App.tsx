@@ -9,6 +9,8 @@ import { SettingsPage } from "./SettingsPage";
 import { FeedsPage } from "./FeedsPage";
 import { SearchPage } from "./SearchPage";
 import { EntryPage } from "./EntryPage";
+import { DigestPage } from "./DigestPage";
+import { DigestEditionPage } from "./DigestEditionPage";
 import { AppBar } from "./AppBar";
 import { useSession, signOut } from "./auth-client";
 import { usePath, navigate } from "./router";
@@ -48,6 +50,8 @@ export function App() {
     if (path === "/search") return <SearchPage />;
     if (path.startsWith("/entry/")) return <EntryPage />;
     if (path === "/feeds") return <FeedsPage />;
+    if (path === "/digest") return <DigestPage />;
+    if (path.startsWith("/digest/")) return <DigestEditionPage />;
     if (path === "/api-keys") return <ApiKeysPage />;
     if (path === "/settings") return <SettingsPage />;
     return <LandingPage />;

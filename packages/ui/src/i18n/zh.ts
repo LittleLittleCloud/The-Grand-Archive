@@ -4,6 +4,7 @@ export default {
     home: "首页",
     search: "搜索",
     feeds: "信息源",
+    digest: "大案牍日报",
     apiKeys: "API 密钥",
     signIn: "登录",
     signOut: "退出",
@@ -162,5 +163,28 @@ export default {
     daysAgo: "{{n}} 天前",
     less: "少",
     more: "多",
+  },
+
+  // Daily Digest
+  digest: {
+    kicker: "大案牍日报",
+    title: "每日新闻，以报纸风格为你精编",
+    subtitle:
+      "由 AI 撜写的每日报纸，汇编我们追踪的所有新闻源。免费，每天一封邮件，可随时退订。",
+    emailPlaceholder: "you@example.com",
+    subscribe: "订阅",
+    subscribing: "订阅中…",
+    subscribeError: "出错了，请重试。",
+    checkInbox: "就差一步——请查收邮件以确认订阅。",
+    browseArchive: "浏览往期 →",
+    archiveTitle: "大案牍日报 · 往期存档",
+    archiveSubtitle: "所有往期内容，免费阅读。",
+    loading: "加载中…",
+    empty: "尚未发布任何一期，敬请期待。",
+    notFound: "未找到该期内容。",
+    backToArchive: "返回存档",
+    confirmedBanner: "订阅已确认，第一期快报即将送达。",
+    unsubscribedBanner: "您已退订，期待再会。",
+    errorBanner: "链接无效或已过期。",
   },
 } as const;

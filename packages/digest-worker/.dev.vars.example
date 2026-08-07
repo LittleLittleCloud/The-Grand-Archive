@@ -1,0 +1,39 @@
+# Local dev secrets for the digest worker (pi-ai via Cloudflare AI Gateway).
+# Copy this file to `.dev.vars` (which is gitignored) and fill in the values:
+#
+#   cp .dev.vars.example .dev.vars
+#
+# Then run:  bunx wrangler dev --port 8792 --persist-to ../../.wrangler-state
+# and trigger:  curl "http://127.0.0.1:8792/run?lang=en"
+
+# ── CLOUDFLARE_ACCOUNT_ID ────────────────────────────────────────────────
+# Your account id. Get it with `wrangler whoami`, or from the Cloudflare
+# dashboard → Workers & Pages → (right sidebar) Account ID.
+CLOUDFLARE_ACCOUNT_ID=""
+
+# ── CLOUDFLARE_GATEWAY_ID ────────────────────────────────────────────────
+# The name/slug of an AI Gateway. Create one in the dashboard:
+# AI → AI Gateway → Create Gateway (the gateway name IS the id, e.g. "dak").
+CLOUDFLARE_GATEWAY_ID=""
+
+# ── CLOUDFLARE_API_KEY ───────────────────────────────────────────────────
+# An API TOKEN (used as a bearer token by pi-ai), NOT your global API key.
+# Dashboard → My Profile → API Tokens → Create Token → Custom token, with:
+#   • Account › Workers AI › Read + Run   (to invoke models)
+# Scope it to this account. Paste the generated token below.
+CLOUDFLARE_API_KEY=""
+
+# ── Optional ─────────────────────────────────────────────────────────────
+# Guards the manual /run endpoint (Authorization: Bearer <token>). Leave empty
+# to allow unauthenticated /run in local dev.
+DIGEST_TRIGGER_TOKEN=""
+
+# Override the model (defaults to the value in wrangler.jsonc). Must exist in
+# pi-ai's cloudflare-ai-gateway catalog. Workers-AI models usable with only
+# CLOUDFLARE_API_KEY:
+#   workers-ai/@cf/moonshotai/kimi-k2.6      (default)
+#   workers-ai/@cf/moonshotai/kimi-k2.5
+#   workers-ai/@cf/zai-org/glm-5.2
+#   workers-ai/@cf/zai-org/glm-4.7-flash
+#   workers-ai/@cf/nvidia/nemotron-3-120b-a12b
+# DIGEST_MODEL="workers-ai/@cf/moonshotai/kimi-k2.6"
