@@ -6,6 +6,10 @@ import type {
   ApiKey,
   ApiKeyCreateResponse,
   FeedsStatusResponse,
+  DigestLang,
+  DigestSubscribeResponse,
+  DigestEditionsResponse,
+  DigestEdition,
 } from "@dak/contract";
 import { ROUTES } from "@dak/contract";
 
@@ -96,5 +100,24 @@ export const api = {
     request<{ ok: boolean }>(
       ROUTES.API_KEY_BY_ID.replace(":id", encodeURIComponent(id)),
       { method: "DELETE" }
+    ),
+
+  // ─── Daily Digest ─────────────────────────────────────
+
+  subscribeDigest: (email: string, lang: DigestLang) =>
+    request<DigestSubscribeResponse>(ROUTES.DIGEST_SUBSCRIBE, {
+      method: "POST",
+      body: JSON.stringify({ email, lang }),
+    }),
+
+  getDigestEditions: (lang?: DigestLang) =>
+    request<DigestEditionsResponse>(`${ROUTES.DIGEST_EDITIONS}${qs({ lang })}`),
+
+  getDigestEdition: (date: string, lang: DigestLang) =>
+    request<DigestEdition>(
+      ROUTES.DIGEST_EDITION_BY_DATE_LANG.replace(":date", encodeURIComponent(date)).replace(
+        ":lang",
+        encodeURIComponent(lang)
+      )
     ),
 };

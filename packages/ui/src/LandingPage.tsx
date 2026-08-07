@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "./api";
 import type { StatsResponse } from "@dak/contract";
 import { handleLinkClick } from "./router";
+import { DigestSubscribe } from "./DigestSubscribe";
 
 const FAQ_KEYS = [
   { qKey: "faq.q1", aKey: "faq.a1" },
@@ -271,6 +272,9 @@ export function LandingPage() {
           </div>
         </section>
       )}
+
+      {/* ═══ 3. Daily Dispatch subscribe ═══ */}
+      <DigestSubscribe />
 
       {/* ═══ 4. Features ═══ */}
       <section className="bg-surface-low">

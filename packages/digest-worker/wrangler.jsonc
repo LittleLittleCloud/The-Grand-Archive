@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dak-digest-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": {
+    "crons": ["0 8 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dak",
+      "database_id": "3613c8de-a4cb-472c-b00f-b4a4cc2bb5a0"
+    }
+  ],
+  "workflows": [
+    {
+      "name": "dak-digest-workflow",
+      "binding": "DIGEST_WORKFLOW",
+      "class_name": "DigestWorkflow"
+    }
+  ],
+  "send_email": [{ "name": "EMAIL" }],
+  "vars": {
+    "PUBLIC_BASE_URL": "https://dak-news.com",
+    "EMAIL_FROM": "dispatch@dak-news.com",
+    "DIGEST_MODEL": "workers-ai/@cf/moonshotai/kimi-k2.6"
+  },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  }
+}

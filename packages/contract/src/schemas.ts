@@ -144,6 +144,64 @@ export const FeedsStatusResponseSchema = z.object({
   dailyBins: z.array(DailyBinSchema),
 });
 
+// ─── Daily Digest ───────────────────────────────────────
+
+/** Languages a digest edition can be produced in. */
+export const DigestLangSchema = z.enum(["en", "zh"]);
+
+/** One story inside a section of a newspaper edition. */
+export const DigestItemSchema = z.object({
+  title: z.string(),
+  summary: z.string(),
+  url: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
+  entryId: z.string().nullable().optional(),
+});
+
+/** A themed section (e.g. Finance, Tech) of a newspaper edition. */
+export const DigestSectionSchema = z.object({
+  heading: z.string(),
+  blurb: z.string().nullable().optional(),
+  items: z.array(DigestItemSchema),
+});
+
+/** Structured content the agent produces and the renderer consumes. */
+export const DigestContentSchema = z.object({
+  title: z.string(),
+  standfirst: z.string(),
+  sections: z.array(DigestSectionSchema),
+});
+
+/** POST /api/digest/subscribe */
+export const DigestSubscribeRequestSchema = z.object({
+  email: z.string().email(),
+  lang: DigestLangSchema.default("en"),
+});
+
+export const DigestSubscribeResponseSchema = z.object({
+  status: z.enum(["pending", "active"]),
+  message: z.string(),
+});
+
+/** Listing item for the public archive. */
+export const DigestEditionSummarySchema = z.object({
+  date: z.string(), // YYYY-MM-DD
+  lang: DigestLangSchema,
+  title: z.string(),
+  summary: z.string().nullable(),
+});
+
+export const DigestEditionsResponseSchema = z.object({
+  editions: z.array(DigestEditionSummarySchema),
+});
+
+/** A full edition, including rendered HTML and structured sections. */
+export const DigestEditionSchema = DigestEditionSummarySchema.extend({
+  html: z.string(),
+  sections: z.array(DigestSectionSchema),
+  created_at: z.string(),
+});
+
 // ─── Error ──────────────────────────────────────────────
 
 export const ErrorResponseSchema = z.object({

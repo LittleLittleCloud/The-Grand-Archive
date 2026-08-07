@@ -20,6 +20,15 @@ import type {
   FeedStatusSchema,
   DailyBinSchema,
   FeedsStatusResponseSchema,
+  DigestLangSchema,
+  DigestItemSchema,
+  DigestSectionSchema,
+  DigestContentSchema,
+  DigestSubscribeRequestSchema,
+  DigestSubscribeResponseSchema,
+  DigestEditionSummarySchema,
+  DigestEditionsResponseSchema,
+  DigestEditionSchema,
 } from "./schemas";
 
 export type Entry = z.infer<typeof EntrySchema>;
@@ -42,3 +51,12 @@ export type RateLimitError = z.infer<typeof RateLimitErrorSchema>;
 export type FeedStatus = z.infer<typeof FeedStatusSchema>;
 export type DailyBin = z.infer<typeof DailyBinSchema>;
 export type FeedsStatusResponse = z.infer<typeof FeedsStatusResponseSchema>;
+export type DigestLang = z.infer<typeof DigestLangSchema>;
+export type DigestItem = z.infer<typeof DigestItemSchema>;
+export type DigestSection = z.infer<typeof DigestSectionSchema>;
+export type DigestContent = z.infer<typeof DigestContentSchema>;
+export type DigestSubscribeRequest = z.input<typeof DigestSubscribeRequestSchema>;
+export type DigestSubscribeResponse = z.infer<typeof DigestSubscribeResponseSchema>;
+export type DigestEditionSummary = z.infer<typeof DigestEditionSummarySchema>;
+export type DigestEditionsResponse = z.infer<typeof DigestEditionsResponseSchema>;
+export type DigestEdition = z.infer<typeof DigestEditionSchema>;

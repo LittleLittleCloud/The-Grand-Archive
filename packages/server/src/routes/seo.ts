@@ -293,20 +293,33 @@ seoRoutes.get("/AGENTS.md", agentsHandler);
 seoRoutes.get("/agents.md", agentsHandler);
 
 /* ── sitemap.xml ── */
-seoRoutes.get("/sitemap.xml", (c) => {
+seoRoutes.get("/sitemap.xml", async (c) => {
   // Static pages
   const staticPages = [
     { loc: "/", priority: "1.0", changefreq: "hourly" },
     { loc: "/search", priority: "0.9", changefreq: "hourly" },
     { loc: "/feeds", priority: "0.8", changefreq: "daily" },
+    { loc: "/digest", priority: "0.8", changefreq: "daily" },
     { loc: "/AGENTS.md", priority: "0.5", changefreq: "monthly" },
   ];
 
-  // Static pages only — /entry/* pages are noindex and excluded from sitemap
+  // Published digest editions are public + indexable (unlike /entry/* which is
+  // noindex). List them so crawlers can discover every edition.
+  const editions =
+    (
+      await c.env.DB.prepare(
+        "SELECT date, lang FROM digest_editions WHERE status = 'published' ORDER BY date DESC LIMIT 2000"
+      ).all<{ date: string; lang: string }>()
+    ).results ?? [];
+
   const urls = [
     ...staticPages.map(
       (p) =>
         `  <url><loc>https://dak-news.com${p.loc}</loc><changefreq>${p.changefreq}</changefreq><priority>${p.priority}</priority></url>`
+    ),
+    ...editions.map(
+      (e) =>
+        `  <url><loc>https://dak-news.com/digest/${e.date}/${e.lang}</loc><lastmod>${e.date}</lastmod><changefreq>never</changefreq><priority>0.6</priority></url>`
     ),
   ];
 
@@ -317,6 +330,7 @@ seoRoutes.get("/sitemap.xml", (c) => {
     `</urlset>`,
   ].join("\n");
 
+  c.header("Cache-Control", "public, max-age=600, s-maxage=3600");
   return c.text(xml, 200, { "Content-Type": "application/xml" });
 });
 
@@ -459,6 +473,95 @@ export function entryMetaMiddleware() {
     ].join("\n    ");
     html = html.replace(/<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/, metaTags);
     c.header("Cache-Control", "public, max-age=300, s-maxage=1800, stale-while-revalidate=600");
+    return c.html(html);
+  });
+
+  /* /digest — public archive index (indexable) */
+  app.get("/digest", async (c) => {
+    let html = await getIndexHtml(c);
+    const metaTags = [
+      `<title>DAK Daily — 大案牍库 每日新闻报纸</title>`,
+      `<meta name="description" content="大案牍库 DAK Daily：由 AI 撜写的报纸风格每日新闻摘要，覆盖财经、地缘政治、科技与社会热点。免费订阅，每日一封，可随时退订。">`,
+      `<link rel="canonical" href="https://dak-news.com/digest">`,
+      `<meta property="og:title" content="DAK Daily — 大案牍库 每日新闻报纸">`,
+      `<meta property="og:description" content="由 AI 撜写的每日报纸风格新闻摘要。免费订阅，每日一封。">`,
+      `<meta property="og:url" content="https://dak-news.com/digest">`,
+      `<meta property="og:type" content="website">`,
+      `<meta property="og:site_name" content="大案牍库 The Grand Archive">`,
+      `<meta name="twitter:card" content="summary">`,
+      `<meta name="twitter:title" content="DAK Daily — 大案牍库">`,
+      `<meta name="twitter:description" content="由 AI 撜写的每日报纸风格新闻摘要">`,
+    ].join("\n    ");
+    html = html.replace(/<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/, () => metaTags);
+    c.header("Cache-Control", "public, max-age=300, s-maxage=1800, stale-while-revalidate=600");
+    return c.html(html);
+  });
+
+  /* /digest/:date/:lang — a single edition: full meta + JSON-LD + noscript body */
+  app.get("/digest/:date/:lang", async (c) => {
+    const date = c.req.param("date");
+    const lang = c.req.param("lang");
+    let html = await getIndexHtml(c);
+    if (lang !== "en" && lang !== "zh") return c.html(html);
+
+    const ed = await c.env.DB
+      .prepare(
+        "SELECT title, summary, html FROM digest_editions WHERE date = ? AND lang = ? AND status = 'published'"
+      )
+      .bind(date, lang)
+      .first<{ title: string; summary: string | null; html: string }>();
+
+    if (ed) {
+      const title = escapeHtml(ed.title) + " — 大案牍库";
+      const description = escapeHtml((ed.summary || ed.title).slice(0, 200).replace(/\s+/g, " "));
+      const url = `https://dak-news.com/digest/${encodeURIComponent(date)}/${lang}`;
+
+      const jsonLd = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": ed.title,
+        "description": (ed.summary || ed.title).slice(0, 200),
+        "url": url,
+        "datePublished": date,
+        "inLanguage": lang === "zh" ? "zh-CN" : "en",
+        "isAccessibleForFree": true,
+        "publisher": {
+          "@type": "Organization",
+          "name": "大案牍库",
+          "url": "https://dak-news.com",
+        },
+      });
+
+      const metaTags = [
+        `<title>${title}</title>`,
+        `<meta name="description" content="${description}">`,
+        `<link rel="canonical" href="${url}">`,
+        `<meta property="og:title" content="${title}">`,
+        `<meta property="og:description" content="${description}">`,
+        `<meta property="og:url" content="${url}">`,
+        `<meta property="og:type" content="article">`,
+        `<meta property="og:site_name" content="大案牍库 The Grand Archive">`,
+        `<meta property="article:published_time" content="${date}">`,
+        `<meta name="twitter:card" content="summary">`,
+        `<meta name="twitter:title" content="${title}">`,
+        `<meta name="twitter:description" content="${description}">`,
+        `<script type="application/ld+json">${jsonLd}</script>`,
+      ].join("\n    ");
+      html = html.replace(/<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/, () => metaTags);
+
+      const bodyContent = [
+        `<noscript>`,
+        `  <article>`,
+        `    <h1>${escapeHtml(ed.title)}</h1>`,
+        `    ${ed.html}`,
+        `  </article>`,
+        `</noscript>`,
+      ].join("\n");
+      html = html.replace(/<noscript>[\s\S]*?<\/noscript>/, () => bodyContent);
+
+      c.header("Cache-Control", "public, max-age=600, s-maxage=3600");
+    }
+
     return c.html(html);
   });
 

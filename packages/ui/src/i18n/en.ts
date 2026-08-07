@@ -4,6 +4,7 @@ export default {
     home: "Home",
     search: "Search",
     feeds: "Feeds",
+    digest: "DAK Daily",
     apiKeys: "API Keys",
     signIn: "Sign in",
     signOut: "Sign out",
@@ -162,5 +163,28 @@ export default {
     daysAgo: "{{n}}d ago",
     less: "Less",
     more: "More",
+  },
+
+  // Daily Digest
+  digest: {
+    kicker: "DAK Daily",
+    title: "Get the day's news, curated as a newspaper",
+    subtitle:
+      "A daily, AI-written newspaper edition distilled from every source we track. Free, one email a day, unsubscribe anytime.",
+    emailPlaceholder: "you@example.com",
+    subscribe: "Subscribe",
+    subscribing: "Subscribing…",
+    subscribeError: "Something went wrong. Please try again.",
+    checkInbox: "Almost there — check your inbox to confirm your subscription.",
+    browseArchive: "Browse past editions →",
+    archiveTitle: "DAK Daily — Archive",
+    archiveSubtitle: "Every past edition, free to read.",
+    loading: "Loading…",
+    empty: "No editions have been published yet. Check back soon.",
+    notFound: "That edition could not be found.",
+    backToArchive: "Back to the archive",
+    confirmedBanner: "Your subscription is confirmed. Your first dispatch is on its way.",
+    unsubscribedBanner: "You have been unsubscribed. Sorry to see you go.",
+    errorBanner: "That link is invalid or has expired.",
   },
 } as const;
