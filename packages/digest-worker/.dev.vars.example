@@ -5,25 +5,23 @@
 #
 # Then run:  bunx wrangler dev --port 8792 --persist-to ../../.wrangler-state
 # and trigger:  curl "http://127.0.0.1:8792/run?lang=en"
+#
+# NOTE: CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_GATEWAY_ID now live in
+# wrangler.jsonc `vars` (so CI sets them on deploy, and local dev picks them up
+# automatically). The ONLY value you must provide here is CLOUDFLARE_API_KEY.
 
-# ── CLOUDFLARE_ACCOUNT_ID ────────────────────────────────────────────────
-# Your account id. Get it with `wrangler whoami`, or from the Cloudflare
-# dashboard → Workers & Pages → (right sidebar) Account ID.
-CLOUDFLARE_ACCOUNT_ID=""
-
-# ── CLOUDFLARE_GATEWAY_ID ────────────────────────────────────────────────
-# The name/slug of an AI Gateway. Create one in the dashboard:
-# AI → AI Gateway → Create Gateway (the gateway name IS the id, e.g. "dak").
-CLOUDFLARE_GATEWAY_ID=""
-
-# ── CLOUDFLARE_API_KEY ───────────────────────────────────────────────────
+# ── CLOUDFLARE_API_KEY (the only required secret) ────────────────────────
 # An API TOKEN (used as a bearer token by pi-ai), NOT your global API key.
 # Dashboard → My Profile → API Tokens → Create Token → Custom token, with:
 #   • Account › Workers AI › Read + Run   (to invoke models)
 # Scope it to this account. Paste the generated token below.
 CLOUDFLARE_API_KEY=""
 
-# ── Optional ─────────────────────────────────────────────────────────────
+# ── Optional overrides ───────────────────────────────────────────────────
+# Uncomment to override the wrangler.jsonc vars for local dev only:
+# CLOUDFLARE_ACCOUNT_ID=""
+# CLOUDFLARE_GATEWAY_ID=""
+
 # Guards the manual /run endpoint (Authorization: Bearer <token>). Leave empty
 # to allow unauthenticated /run in local dev.
 DIGEST_TRIGGER_TOKEN=""

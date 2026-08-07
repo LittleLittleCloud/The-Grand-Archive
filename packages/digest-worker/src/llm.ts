@@ -8,6 +8,20 @@ import type { Bindings } from "./types";
 
 const DEFAULT_MODEL = "workers-ai/@cf/moonshotai/kimi-k2.6";
 
+// Cap any single model call so a stalled provider/stream becomes a clean error
+// (which the Workflow step retries) instead of hanging the Worker isolate
+// — the Workers runtime cancels "hung" requests that never resolve.
+const LLM_TIMEOUT_MS = 120_000;
+
+/** Combine an optional caller signal with our timeout signal. */
+function withTimeoutSignal(callerSignal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(LLM_TIMEOUT_MS);
+  if (!callerSignal) return timeout;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const any = (AbortSignal as any).any;
+  return typeof any === "function" ? any([callerSignal, timeout]) : timeout;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyModel = any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,10 +67,17 @@ export function createLlm(env: Bindings): Llm {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamFn = (m: AnyModel, context: AnyContext, options: any = {}) =>
-    models.streamSimple(m, context, { ...options, env: creds });
+    models.streamSimple(m, context, {
+      ...options,
+      env: creds,
+      signal: withTimeoutSignal(options.signal),
+    });
 
   const complete = async (context: AnyContext): Promise<string> => {
-    const msg = await models.completeSimple(model, context, { env: creds });
+    const msg = await models.completeSimple(model, context, {
+      env: creds,
+      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+    });
     return messageText(msg);
   };
 

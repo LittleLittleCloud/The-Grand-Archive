@@ -30,6 +30,19 @@ function finalAssistantText(agent: any): string {
   return "";
 }
 
+// Hard ceiling on the whole research step. If the agent stalls (e.g. a provider
+// stream that never closes), reject so the Workflow step fails cleanly and
+// retries — rather than the Workers runtime canceling a "hung" request.
+const GATHER_TIMEOUT_MS = 180_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([p.finally(() => clearTimeout(timer)), timeout]);
+}
+
 /**
  * Log a concise trace of the agent run — tool calls, tool results, assistant
  * turns — to the worker logs (visible in the `dak: digest` dev terminal locally
@@ -84,10 +97,22 @@ export async function gatherBrief(env: Bindings, date: string): Promise<Research
   // Attach the trace before prompting so every tool call / turn is logged.
   const untrace = traceAgent(agent, "gather");
   try {
-    await agent.prompt(
-      `Today is ${date} (UTC). Survey the last 24 hours of news and select the day's stories. ` +
-        `Start by calling list_recent for the main categories, then dig in where a story looks important.`
+    await withTimeout(
+      agent.prompt(
+        `Today is ${date} (UTC). Survey the last 24 hours of news and select the day's stories. ` +
+          `Start by calling list_recent for the main categories, then dig in where a story looks important.`
+      ),
+      GATHER_TIMEOUT_MS,
+      "gather agent"
     );
+  } catch (err) {
+    console.error("[gather] agent run failed or timed out:", err);
+    // Cancel any in-flight work so nothing is left pending on the isolate.
+    try {
+      agent.abort?.();
+    } catch {
+      /* ignore */
+    }
   } finally {
     untrace();
   }

@@ -25,7 +25,12 @@
   "vars": {
     "PUBLIC_BASE_URL": "https://dak-news.com",
     "EMAIL_FROM": "dispatch@dak-news.com",
-    "DIGEST_MODEL": "workers-ai/@cf/moonshotai/kimi-k2.6"
+    "DIGEST_MODEL": "workers-ai/@cf/moonshotai/kimi-k2.6",
+    // AI Gateway config (non-secret). CI sets these on every deploy. Only
+    // CLOUDFLARE_API_KEY is a real secret (set via `wrangler secret put`).
+    // ⚠️ CLOUDFLARE_GATEWAY_ID must match the name of your AI Gateway.
+    "CLOUDFLARE_ACCOUNT_ID": "c1175ba92905ae7eb4bf4f0f987ca8d2",
+    "CLOUDFLARE_GATEWAY_ID": "dak"
   },
   "observability": {
     "logs": {
