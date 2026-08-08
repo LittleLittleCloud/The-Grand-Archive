@@ -136,7 +136,7 @@ export async function searchFts(
 
   const { results } = await db
     .prepare(
-      `SELECT e.id, e.title, e.source, e.category, e.published,
+      `SELECT e.id, e.title, e.url, e.source, e.category, e.published,
               rank * -1 as score
        FROM entries_fts f
        JOIN entries e ON e.rowid = f.rowid
@@ -149,6 +149,7 @@ export async function searchFts(
     .all<{
       id: string;
       title: string;
+      url: string;
       source: string;
       category: string;
       published: string;
@@ -159,6 +160,7 @@ export async function searchFts(
     results: results.map((r) => ({
       id: r.id,
       title: r.title,
+      url: r.url,
       source: r.source,
       category: r.category,
       published: r.published,

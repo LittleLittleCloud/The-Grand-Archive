@@ -20,7 +20,7 @@
   "containers": [
     {
       "class_name": "RsshubContainer",
-      "image": "docker.io/diygod/rsshub:chromium-bundled-2026-07-24",
+      "image": "./rsshub.Dockerfile",
       "instance_type": "standard-1",
       "max_instances": 1
     }

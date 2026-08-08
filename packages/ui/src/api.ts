@@ -10,6 +10,11 @@ import type {
   DigestSubscribeResponse,
   DigestEditionsResponse,
   DigestEdition,
+  UserDigest,
+  UserDigestListResponse,
+  UserDigestCreateRequest,
+  UserDigestUpdateRequest,
+  UserDigestVisibility,
 } from "@dak/contract";
 import { ROUTES } from "@dak/contract";
 
@@ -130,4 +135,40 @@ export const api = {
       method: "POST",
       body: JSON.stringify(params ?? {}),
     }),
+
+  // ─── User-published digests ───────────────────────────
+
+  listUserDigests: () => request<UserDigestListResponse>(ROUTES.USER_DIGESTS),
+
+  getUserDigest: (id: string) =>
+    request<UserDigest>(ROUTES.USER_DIGEST_BY_ID.replace(":id", encodeURIComponent(id))),
+
+  createUserDigest: (body: UserDigestCreateRequest) =>
+    request<UserDigest>(ROUTES.USER_DIGESTS, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  updateUserDigest: (id: string, body: UserDigestUpdateRequest) =>
+    request<UserDigest>(ROUTES.USER_DIGEST_BY_ID.replace(":id", encodeURIComponent(id)), {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  deleteUserDigest: (id: string) =>
+    request<{ ok: boolean }>(
+      ROUTES.USER_DIGEST_BY_ID.replace(":id", encodeURIComponent(id)),
+      { method: "DELETE" }
+    ),
+
+  shareUserDigest: (id: string, visibility: UserDigestVisibility) =>
+    request<UserDigest>(ROUTES.USER_DIGEST_SHARE.replace(":id", encodeURIComponent(id)), {
+      method: "POST",
+      body: JSON.stringify({ visibility }),
+    }),
+
+  getPublicUserDigest: (shareId: string) =>
+    request<UserDigest>(
+      ROUTES.USER_DIGEST_PUBLIC.replace(":shareId", encodeURIComponent(shareId))
+    ),
 };

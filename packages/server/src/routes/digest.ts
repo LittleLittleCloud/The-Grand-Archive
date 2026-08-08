@@ -241,20 +241,25 @@ digestRoutes.get("/digest/editions/:date/:lang", async (c) => {
 // Gated by INGEST_ALLOWED_USERS (same admin list as ingest). The server calls
 // the digest worker's token-guarded /run endpoint, which starts the Workflow.
 
-function isDigestAdmin(c: Context<HonoEnv>): boolean {
+function isDigestAdmin(c: Context<HonoEnv>): Promise<boolean> {
   const allowed = (c.env.INGEST_ALLOWED_USERS ?? "").split(",").filter(Boolean);
   const userId = c.get("userId") as string | undefined;
-  return !!userId && allowed.includes(userId);
+  if (!userId) return Promise.resolve(false);
+  if (allowed.includes(userId)) return Promise.resolve(true);
+  return c.env.DB.prepare("SELECT role FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ role: string | null }>()
+    .then((row) => row?.role === "admin");
 }
 
 /** Capability check so the UI can show/hide the admin control. */
-digestRoutes.get("/admin/digest", (c) => {
-  return c.json({ canTrigger: isDigestAdmin(c) });
+digestRoutes.get("/admin/digest", async (c) => {
+  return c.json({ canTrigger: await isDigestAdmin(c) });
 });
 
 /** Kick off a digest run (defaults to today, both languages). */
 digestRoutes.post("/admin/digest/run", async (c) => {
-  if (!isDigestAdmin(c)) {
+  if (!(await isDigestAdmin(c))) {
     return c.json({ error: "Forbidden", code: "NOT_ALLOWED" }, 403);
   }
 

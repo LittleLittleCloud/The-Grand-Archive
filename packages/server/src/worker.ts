@@ -6,6 +6,7 @@ import { statsRoutes } from "./routes/stats";
 import { ingestRoutes } from "./routes/ingest";
 import { authRoutes } from "./routes/auth";
 import { digestRoutes } from "./routes/digest";
+import { userDigestRoutes } from "./routes/user-digests";
 import { seoRoutes, entryMetaMiddleware } from "./routes/seo";
 import { errorHandler } from "./middleware/error";
 import { tierMiddleware } from "./middleware/tier";
@@ -35,6 +36,7 @@ app.route("/api", statsRoutes);
 app.route("/api", ingestRoutes);
 app.route("/api", authRoutes);
 app.route("/api", digestRoutes);
+app.route("/api", userDigestRoutes);
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));

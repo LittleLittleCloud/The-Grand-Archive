@@ -6,6 +6,7 @@ export default {
     feeds: "信息源",
     digest: "大案牍日报",
     apiKeys: "API 密钥",
+    myDigests: "我的日报",
     signIn: "登录",
     signOut: "退出",
   },
@@ -186,5 +187,71 @@ export default {
     confirmedBanner: "订阅已确认，第一期快报即将送达。",
     unsubscribedBanner: "您已退订，期待再会。",
     errorBanner: "链接无效或已过期。",
+    publishKicker: "创作",
+    publishTitle: "发布你自己的日报",
+    publishSubtitle:
+      "让你的 AI Agent 从大案牍库精编当日新闻，几分钟内发布一份可分享的报纸风格日报。",
+    publishCta: "创建日报",
+    publishLearn: "了解详情 →",
+  },
+
+  // 用户发布的日报（管理）
+  myDigests: {
+    title: "我的日报",
+    new: "+ 新建",
+    intro:
+      "发布一份完整、符合格式的日报（通常由你自己的 Agent 生成）。日报默认私有——分享后即可获得公开链接。",
+    formatDocs: "格式：",
+    signInPrompt: "请登录以管理你的日报。",
+    signIn: "登录",
+    loading: "加载中…",
+    empty: "还没有日报，创建你的第一份吧。",
+    public: "公开",
+    private: "私有",
+    share: "分享",
+    unpublish: "取消发布",
+    copyLink: "复制链接",
+    view: "查看",
+    edit: "编辑",
+    delete: "删除",
+    deleteConfirm: "删除《{{title}}》？此操作无法撤销。",
+    editTitle: "编辑日报",
+    newTitle: "新建日报",
+    language: "语言",
+    date: "日期",
+    invalidJson: "内容不是有效的 JSON。",
+    schemaHint: "——请检查内容是否符合格式要求。",
+    genericError: "出错了。",
+    couldNotLoad: "无法加载该日报。",
+    save: "保存修改",
+    publish: "发布",
+    saving: "保存中…",
+    cancel: "取消",
+  },
+
+  // 公开的用户日报视图
+  userDigest: {
+    loading: "加载中…",
+    unavailable: "该日报不可用或已取消分享。",
+    bannerStrip: "由 大案牍库 · The Grand Archive 提供 —— 实时精编新闻",
+    bannerBrand: "大案牍库 · The Grand Archive",
+    bannerDesc:
+      "本日报发布于大案牍库 —— 一个实时新闻数据库，追踪财经、地缘政治、科技与文化领域的 20+ 权威信息源，每 30 分钟更新。",
+    explore: "浏览档案",
+    readDaily: "阅读大案牍日报",
+    share: "分享",
+    shareNative: "分享…",
+    copyLink: "复制链接",
+    copied: "已复制！",
+  },
+
+  // “发布你自己的日报”说明卡片
+  generateDigest: {
+    title: "发布你自己的日报",
+    subtitle:
+      "让你的 AI Agent 接入大案牍库，自动精编并发布一份可分享的日报——只需几分钟。",
+    copy: "复制",
+    copied: "已复制！",
+    getApiKey: "获取 API 密钥 →",
   },
 } as const;

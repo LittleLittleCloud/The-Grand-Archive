@@ -41,6 +41,7 @@ export function AppBar({
             <NavLink href="/search">{t("nav.search")}</NavLink>
             <NavLink href="/feeds">{t("nav.feeds")}</NavLink>
             <NavLink href="/digest">{t("nav.digest")}</NavLink>
+            {user && <NavLink href="/my-digests">{t("nav.myDigests", "My Digests")}</NavLink>}
           </nav>
         </div>
 
@@ -90,6 +91,9 @@ export function AppBar({
           <MobileNavLink href="/search" onClick={() => setMobileMenuOpen(false)}>{t("nav.search")}</MobileNavLink>
           <MobileNavLink href="/feeds" onClick={() => setMobileMenuOpen(false)}>{t("nav.feeds")}</MobileNavLink>
           <MobileNavLink href="/digest" onClick={() => setMobileMenuOpen(false)}>{t("nav.digest")}</MobileNavLink>
+          {user && (
+            <MobileNavLink href="/my-digests" onClick={() => setMobileMenuOpen(false)}>{t("nav.myDigests", "My Digests")}</MobileNavLink>
+          )}
           {!user && (
             <a
               href="/login"
