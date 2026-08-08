@@ -41,6 +41,7 @@ export const SearchRequestSchema = z.object({
 export const SearchResultSchema = z.object({
   id: z.string(),
   title: z.string(),
+  url: z.string(),
   source: z.string(),
   category: z.string(),
   published: z.string(),
@@ -210,6 +211,66 @@ export const DigestEditionSchema = DigestEditionSummarySchema.extend({
   html: z.string(),
   sections: z.array(DigestSectionSchema),
   created_at: z.string(),
+});
+
+// ─── User-published digests (CRUD) ──────────────────────
+// A logged-in user (typically via their own agent + API key) publishes a
+// complete, schema-valid DigestContent. The server validates, renders, and
+// stores it — no server-side LLM. Private by default; sharing flips it public.
+
+export const UserDigestVisibilitySchema = z.enum(["private", "public"]);
+
+/** POST /api/digests — create a user digest from an agent-produced edition. */
+export const UserDigestCreateRequestSchema = z.object({
+  /** Edition language. Governs rendering/labels. */
+  lang: DigestLangSchema.default("en"),
+  /** Edition date (YYYY-MM-DD, UTC). Defaults to the creation date if omitted. */
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD")
+    .optional(),
+  /** The full, structured newspaper edition. Must match DigestContent exactly. */
+  content: DigestContentSchema,
+});
+
+/** PATCH /api/digests/:id — update any subset. */
+export const UserDigestUpdateRequestSchema = z.object({
+  lang: DigestLangSchema.optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD")
+    .optional(),
+  content: DigestContentSchema.optional(),
+  visibility: UserDigestVisibilitySchema.optional(),
+});
+
+/** POST /api/digests/:id/share — flip visibility (public to share, private to unpublish). */
+export const UserDigestShareRequestSchema = z.object({
+  visibility: UserDigestVisibilitySchema.default("public"),
+});
+
+/** Listing item for a user's own digests. */
+export const UserDigestSummarySchema = z.object({
+  id: z.string(),
+  shareId: z.string(),
+  lang: DigestLangSchema,
+  date: z.string(),
+  title: z.string(),
+  summary: z.string().nullable(),
+  visibility: UserDigestVisibilitySchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  publishedAt: z.string().nullable(),
+});
+
+/** A full user digest, including rendered HTML and structured content. */
+export const UserDigestSchema = UserDigestSummarySchema.extend({
+  html: z.string(),
+  content: DigestContentSchema,
+});
+
+export const UserDigestListResponseSchema = z.object({
+  digests: z.array(UserDigestSummarySchema),
 });
 
 // ─── Error ──────────────────────────────────────────────

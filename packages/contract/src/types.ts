@@ -30,6 +30,13 @@ import type {
   DigestEditionSummarySchema,
   DigestEditionsResponseSchema,
   DigestEditionSchema,
+  UserDigestVisibilitySchema,
+  UserDigestCreateRequestSchema,
+  UserDigestUpdateRequestSchema,
+  UserDigestShareRequestSchema,
+  UserDigestSummarySchema,
+  UserDigestSchema,
+  UserDigestListResponseSchema,
 } from "./schemas";
 
 export type Entry = z.infer<typeof EntrySchema>;
@@ -62,3 +69,10 @@ export type DigestSubscribeResponse = z.infer<typeof DigestSubscribeResponseSche
 export type DigestEditionSummary = z.infer<typeof DigestEditionSummarySchema>;
 export type DigestEditionsResponse = z.infer<typeof DigestEditionsResponseSchema>;
 export type DigestEdition = z.infer<typeof DigestEditionSchema>;
+export type UserDigestVisibility = z.infer<typeof UserDigestVisibilitySchema>;
+export type UserDigestCreateRequest = z.input<typeof UserDigestCreateRequestSchema>;
+export type UserDigestUpdateRequest = z.input<typeof UserDigestUpdateRequestSchema>;
+export type UserDigestShareRequest = z.input<typeof UserDigestShareRequestSchema>;
+export type UserDigestSummary = z.infer<typeof UserDigestSummarySchema>;
+export type UserDigest = z.infer<typeof UserDigestSchema>;
+export type UserDigestListResponse = z.infer<typeof UserDigestListResponseSchema>;

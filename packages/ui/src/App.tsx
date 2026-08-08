@@ -11,6 +11,8 @@ import { SearchPage } from "./SearchPage";
 import { EntryPage } from "./EntryPage";
 import { DigestPage } from "./DigestPage";
 import { DigestEditionPage } from "./DigestEditionPage";
+import { MyDigestsPage } from "./MyDigestsPage";
+import { UserDigestPage } from "./UserDigestPage";
 import { AppBar } from "./AppBar";
 import { useSession, signOut } from "./auth-client";
 import { usePath, navigate } from "./router";
@@ -52,6 +54,8 @@ export function App() {
     if (path === "/feeds") return <FeedsPage />;
     if (path === "/digest") return <DigestPage />;
     if (path.startsWith("/digest/")) return <DigestEditionPage />;
+    if (path === "/my-digests") return <MyDigestsPage />;
+    if (path.startsWith("/d/")) return <UserDigestPage />;
     if (path === "/api-keys") return <ApiKeysPage />;
     if (path === "/settings") return <SettingsPage />;
     return <LandingPage />;

@@ -16,7 +16,7 @@
     "directory": "../ui/dist",
     "binding": "ASSETS"
   },
-  "send_email": [{ "name": "EMAIL" }],
+  "send_email": [{ "name": "EMAIL", "remote": true }],
   "ratelimits": [
     { "name": "RL_ANON", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
     { "name": "RL_FREE", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },

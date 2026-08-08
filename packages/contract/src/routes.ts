@@ -23,6 +23,13 @@ export const ROUTES = {
   DIGEST_EDITION_BY_DATE_LANG: "/api/digest/editions/:date/:lang",
   DIGEST_ADMIN: "/api/admin/digest",
   DIGEST_ADMIN_RUN: "/api/admin/digest/run",
+
+  // User-published digests (CRUD; API-key or session auth)
+  USER_DIGESTS: "/api/digests",
+  USER_DIGEST_SCHEMA: "/api/digests/schema",
+  USER_DIGEST_BY_ID: "/api/digests/:id",
+  USER_DIGEST_SHARE: "/api/digests/:id/share",
+  USER_DIGEST_PUBLIC: "/api/digests/public/:shareId",
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];

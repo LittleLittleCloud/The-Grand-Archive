@@ -6,6 +6,7 @@ export default {
     feeds: "Feeds",
     digest: "DAK Daily",
     apiKeys: "API Keys",
+    myDigests: "My Digests",
     signIn: "Sign in",
     signOut: "Sign out",
   },
@@ -186,5 +187,65 @@ export default {
     confirmedBanner: "Your subscription is confirmed. Your first dispatch is on its way.",
     unsubscribedBanner: "You have been unsubscribed. Sorry to see you go.",
     errorBanner: "That link is invalid or has expired.",
+  },
+
+  // User-published digests (management)
+  myDigests: {
+    title: "My Digests",
+    new: "+ New digest",
+    intro:
+      "Publish a complete, schema-valid edition (typically produced by your own agent). Digests are private by default — share one to get a public link.",
+    formatDocs: "Format:",
+    signInPrompt: "Please sign in to manage your digests.",
+    signIn: "Sign in",
+    loading: "Loading…",
+    empty: "No digests yet. Create your first one.",
+    public: "PUBLIC",
+    private: "PRIVATE",
+    share: "Share",
+    unpublish: "Unpublish",
+    copyLink: "Copy link",
+    view: "View",
+    edit: "Edit",
+    delete: "Delete",
+    deleteConfirm: 'Delete "{{title}}"? This cannot be undone.',
+    editTitle: "Edit digest",
+    newTitle: "New digest",
+    language: "Language",
+    date: "Date",
+    invalidJson: "Content is not valid JSON.",
+    schemaHint: " — check the content matches the schema.",
+    genericError: "Something went wrong.",
+    couldNotLoad: "Could not load that digest.",
+    save: "Save changes",
+    publish: "Publish",
+    saving: "Saving…",
+    cancel: "Cancel",
+  },
+
+  // Public user-digest view
+  userDigest: {
+    loading: "Loading…",
+    unavailable: "This digest is unavailable or no longer shared.",
+    bannerStrip: "Powered by 大案牍库 · The Grand Archive — real-time news, curated",
+    bannerBrand: "大案牍库 · The Grand Archive",
+    bannerDesc:
+      "This digest was published on The Grand Archive — a real-time database tracking 20+ authoritative sources across finance, geopolitics, tech, and culture, updated every 30 minutes.",
+    explore: "Explore the archive",
+    readDaily: "Read DAK Daily",
+    share: "Share",
+    shareNative: "Share…",
+    copyLink: "Copy link",
+    copied: "Copied!",
+  },
+
+  // "Publish your own digest" instruction card
+  generateDigest: {
+    title: "Publish your own digest",
+    subtitle:
+      "Point your AI agent at The Grand Archive and let it curate and publish a shareable edition — in minutes.",
+    copy: "Copy",
+    copied: "Copied!",
+    getApiKey: "Get an API key →",
   },
 } as const;

@@ -26,7 +26,10 @@ seoRoutes.get("/llms.txt", (c) => {
     `> A real-time news database tracking 20+ authoritative sources across finance, geopolitics, tech, and social trending.`,
     ``,
     `For API reference, endpoints, and how to query this database, see our Agent Integration Guide:`,
-    `[${base}/AGENTS.md](${base}/AGENTS.md)`
+    `[${base}/AGENTS.md](${base}/AGENTS.md)`,
+    ``,
+    `Agents can also publish their own shareable newspaper-style digests (auth required).`,
+    `Fetch the exact content format at [${base}/api/digests/schema](${base}/api/digests/schema), then POST to ${base}/api/digests. See the guide above for details.`
   ].join("\n");
   return c.text(md, 200, { "Content-Type": "text/plain; charset=utf-8" });
 });
@@ -226,6 +229,48 @@ curl "${base}/api/stats"
 ### GET /api/feeds/status
 
 Get per-source ingestion status with daily activity bins.
+
+## Publishing Digests
+
+You can publish your own newspaper-style **digest** — a complete, structured edition your agent authors from any material — and get a shareable public link. No server-side LLM is involved: you submit finished, schema-valid content; the API validates, renders, and stores it. **Auth required** (Bearer API key or session).
+
+Digests are **private by default**. Sharing one exposes it (link-only) at \`${base}/d/{shareId}\`.
+
+### GET /api/digests/schema
+
+Returns the exact \`content\` format plus a worked example. Fetch this first so you emit a valid body. The machine-readable schema also lives in [${base}/openapi.json](${base}/openapi.json) (\`UserDigestCreateRequest\`).
+
+\`\`\`bash
+curl "${base}/api/digests/schema"
+\`\`\`
+
+### POST /api/digests
+
+Create a digest. Body: \`{ lang, date?, content }\` — \`lang\` is \`en\` or \`zh\`; \`date\` is \`YYYY-MM-DD\` (defaults to today); \`content\` must match the DigestContent schema.
+
+\`\`\`bash
+curl -X POST "${base}/api/digests" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "llm.agent: true" -H "Content-Type: application/json" \\
+  -d '{"lang":"en","date":"2026-08-07","content":{
+        "title":"My Front Page",
+        "standfirst":"A one-paragraph lead.",
+        "highlights":["First point","Second point"],
+        "sections":[{"heading":"World","items":[
+          {"text":"An attributed point.","source":"Reuters","url":"https://example.com/story"}
+        ]}]
+      }}'
+\`\`\`
+
+Returns the created digest, including its \`id\` and \`shareId\` (a bad body returns HTTP 400 with the validation error).
+
+### Manage & share
+
+- \`GET /api/digests\` — list your digests.
+- \`GET /api/digests/{id}\` — read one of yours.
+- \`PATCH /api/digests/{id}\` — update \`content\`, \`lang\`, \`date\`, or \`visibility\`.
+- \`POST /api/digests/{id}/share\` — body \`{"visibility":"public"}\` to publish (or \`"private"\` to unpublish). Public digests are readable at \`GET /api/digests/public/{shareId}\`.
+- \`DELETE /api/digests/{id}\` — delete one of yours.
 
 ## Access Tiers
 
