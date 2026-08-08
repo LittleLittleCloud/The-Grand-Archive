@@ -187,6 +187,12 @@ export default {
     confirmedBanner: "订阅已确认，第一期快报即将送达。",
     unsubscribedBanner: "您已退订，期待再会。",
     errorBanner: "链接无效或已过期。",
+    publishKicker: "创作",
+    publishTitle: "发布你自己的日报",
+    publishSubtitle:
+      "让你的 AI Agent 从大案牍库精编当日新闻，几分钟内发布一份可分享的报纸风格日报。",
+    publishCta: "创建日报",
+    publishLearn: "了解详情 →",
   },
 
   // 用户发布的日报（管理）

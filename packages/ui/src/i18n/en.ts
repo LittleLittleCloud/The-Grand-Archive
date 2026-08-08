@@ -187,6 +187,12 @@ export default {
     confirmedBanner: "Your subscription is confirmed. Your first dispatch is on its way.",
     unsubscribedBanner: "You have been unsubscribed. Sorry to see you go.",
     errorBanner: "That link is invalid or has expired.",
+    publishKicker: "Create",
+    publishTitle: "Publish your own digest",
+    publishSubtitle:
+      "Have your AI agent curate the day from The Grand Archive and publish a shareable, newspaper-style edition — in minutes.",
+    publishCta: "Create a digest",
+    publishLearn: "How it works →",
   },
 
   // User-published digests (management)
