@@ -610,6 +610,78 @@ export function entryMetaMiddleware() {
     return c.html(html);
   });
 
+  /* /d/:shareId — a shared user digest: OG/Twitter meta with a large image card */
+  app.get("/d/:shareId", async (c) => {
+    const shareId = decodeURIComponent(c.req.param("shareId"));
+    let html = await getIndexHtml(c);
+
+    const digest = await c.env.DB
+      .prepare(
+        "SELECT lang, date, title, summary, content_json FROM user_digests WHERE share_id = ? AND visibility = 'public'"
+      )
+      .bind(shareId)
+      .first<{ lang: string; date: string; title: string; summary: string | null; content_json: string }>();
+
+    if (digest) {
+      let standfirst: string | null = null;
+      try {
+        standfirst = (JSON.parse(digest.content_json) as { standfirst?: string }).standfirst ?? null;
+      } catch {
+        standfirst = null;
+      }
+
+      const title = escapeHtml(digest.title) + " — 大案牍库";
+      const description = escapeHtml(
+        (digest.summary || standfirst || digest.title).slice(0, 200).replace(/\s+/g, " ")
+      );
+      const url = `https://dak-news.com/d/${encodeURIComponent(shareId)}`;
+      const image = "https://dak-news.com/og-default.png";
+
+      const jsonLd = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": digest.title,
+        "description": (digest.summary || standfirst || digest.title).slice(0, 200),
+        "url": url,
+        "image": image,
+        "datePublished": digest.date,
+        "inLanguage": digest.lang === "zh" ? "zh-CN" : "en",
+        "isAccessibleForFree": true,
+        "publisher": {
+          "@type": "Organization",
+          "name": "大案牍库",
+          "url": "https://dak-news.com",
+        },
+      });
+
+      const metaTags = [
+        `<title>${title}</title>`,
+        `<meta name="robots" content="noindex, nofollow">`,
+        `<meta name="description" content="${description}">`,
+        `<link rel="canonical" href="${url}">`,
+        `<meta property="og:title" content="${title}">`,
+        `<meta property="og:description" content="${description}">`,
+        `<meta property="og:url" content="${url}">`,
+        `<meta property="og:type" content="article">`,
+        `<meta property="og:site_name" content="大案牍库 The Grand Archive">`,
+        `<meta property="og:image" content="${image}">`,
+        `<meta property="og:image:width" content="1200">`,
+        `<meta property="og:image:height" content="630">`,
+        `<meta property="article:published_time" content="${digest.date}">`,
+        `<meta name="twitter:card" content="summary_large_image">`,
+        `<meta name="twitter:title" content="${title}">`,
+        `<meta name="twitter:description" content="${description}">`,
+        `<meta name="twitter:image" content="${image}">`,
+        `<script type="application/ld+json">${jsonLd}</script>`,
+      ].join("\n    ");
+      html = html.replace(/<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/, () => metaTags);
+
+      c.header("Cache-Control", "public, max-age=600, s-maxage=3600");
+    }
+
+    return c.html(html);
+  });
+
   return app;
 }
 
