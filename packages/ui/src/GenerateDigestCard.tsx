@@ -3,13 +3,11 @@ import { useTranslation } from "react-i18next";
 import { handleLinkClick } from "./router";
 
 /**
- * "Publish your own digest" instruction card — a tabbed specimen (Tell Your
- * Agent / Skill / curl) mirroring the landing-page style. Placed on public
- * digest pages so readers can learn how to generate and publish their own,
- * driving organic propagation. Code snippets use the live origin so they are
- * copy-paste ready in any environment.
+ * Reusable tabbed specimen card (Tell Your Agent / Skill / curl) with a copy
+ * button. Code snippets use the live origin so they are copy-paste ready in any
+ * environment. Used on public digest pages and the landing-page publish slide.
  */
-export function GenerateDigestCard() {
+export function DigestAgentTabs() {
   const { t } = useTranslation();
   const [active, setActive] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -66,20 +64,6 @@ curl -X POST "${base}/api/digests/DIGEST_ID/share" \\
   };
 
   return (
-    <section className="mt-12">
-      <h2
-        className="text-on-surface"
-        style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700 }}
-      >
-        {t("generateDigest.title")}
-      </h2>
-      <p
-        className="mt-2 mb-5 text-on-surface-variant"
-        style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.6 }}
-      >
-        {t("generateDigest.subtitle")}
-      </p>
-
       <div
         className="overflow-hidden"
         style={{ background: "#f7f4ed", borderRadius: "12px", boxShadow: "0px 12px 32px rgba(28,28,24,0.12)" }}
@@ -129,6 +113,31 @@ curl -X POST "${base}/api/digests/DIGEST_ID/share" \\
           </pre>
         </div>
       </div>
+  );
+}
+
+/**
+ * "Publish your own digest" section for public digest pages — heading, subtitle,
+ * the agent tabs, and a get-an-API-key link.
+ */
+export function GenerateDigestCard() {
+  const { t } = useTranslation();
+  return (
+    <section className="mt-12">
+      <h2
+        className="text-on-surface"
+        style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700 }}
+      >
+        {t("generateDigest.title")}
+      </h2>
+      <p
+        className="mt-2 mb-5 text-on-surface-variant"
+        style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", lineHeight: 1.6 }}
+      >
+        {t("generateDigest.subtitle")}
+      </p>
+
+      <DigestAgentTabs />
 
       <a
         href="/api-keys"

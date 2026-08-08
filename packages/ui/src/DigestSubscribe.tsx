@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { DigestLang } from "@dak/contract";
 import { api, ApiError } from "./api";
 import { handleLinkClick } from "./router";
+import { DigestAgentTabs } from "./GenerateDigestCard";
 
 /**
  * Landing-page digest section — a two-slide sliding carousel that alternates
@@ -27,12 +28,15 @@ export function DigestSubscribe() {
         <div className="overflow-hidden">
           <div
             className="flex transition-transform duration-500 ease-out"
-            style={{ transform: `translateX(-${active * 100}%)` }}
+            style={{
+              width: `${SLIDES * 100}%`,
+              transform: `translateX(-${active * (100 / SLIDES)}%)`,
+            }}
           >
-            <div className="shrink-0" style={{ minWidth: "100%" }}>
+            <div className="min-w-0 overflow-hidden" style={{ width: `${100 / SLIDES}%` }}>
               <SubscribeSlide />
             </div>
-            <div className="shrink-0" style={{ minWidth: "100%" }}>
+            <div className="min-w-0 overflow-hidden" style={{ width: `${100 / SLIDES}%` }}>
               <PublishSlide />
             </div>
           </div>
@@ -203,30 +207,8 @@ function PublishSlide() {
         {t("digest.publishSubtitle")}
       </p>
 
-      <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
-        <a
-          href="/my-digests"
-          onClick={handleLinkClick}
-          className="px-6 py-3 font-semibold transition-colors"
-          style={{ fontFamily: "var(--font-body)", background: "#e9c176", color: "#041926" }}
-        >
-          {t("digest.publishCta")}
-        </a>
-        <a
-          href="/AGENTS.md"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-on-primary/70 hover:text-on-primary transition-colors"
-          style={{
-            fontFamily: "var(--font-label)",
-            fontSize: "0.8rem",
-            letterSpacing: "0.06em",
-            textDecoration: "underline",
-            textUnderlineOffset: "4px",
-          }}
-        >
-          {t("digest.publishLearn")}
-        </a>
+      <div className="mt-8 text-left">
+        <DigestAgentTabs />
       </div>
     </div>
   );
