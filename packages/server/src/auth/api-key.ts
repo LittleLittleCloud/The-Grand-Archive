@@ -45,3 +45,26 @@ export async function verifyApiKey(
 
   return { userId: row.user_id, keyId: row.id };
 }
+
+/** Look up user by OAuth bearer access token. Returns userId/tokenId or null. */
+export async function verifyOAuthAccessToken(
+  db: D1Database,
+  token: string
+): Promise<{ userId: string; tokenId: string } | null> {
+  const hash = await hashApiKey(token);
+  const row = await db
+    .prepare(
+      "SELECT id, user_id FROM oauth_access_tokens WHERE hash = ? AND (expires_at IS NULL OR expires_at > datetime('now'))"
+    )
+    .bind(hash)
+    .first<{ id: string; user_id: string }>();
+
+  if (!row) return null;
+
+  await db
+    .prepare("UPDATE oauth_access_tokens SET last_used = datetime('now') WHERE id = ?")
+    .bind(row.id)
+    .run();
+
+  return { userId: row.user_id, tokenId: row.id };
+}

@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import { verifyApiKey } from "../auth/api-key";
+import { verifyApiKey, verifyOAuthAccessToken } from "../auth/api-key";
 import type { HonoEnv } from "../types";
 
 /**
@@ -20,6 +20,11 @@ export function apiKeyMiddleware() {
       if (result) {
         c.set("userId", result.userId);
         c.set("apiKeyId", result.keyId);
+      } else {
+        const oauth = await verifyOAuthAccessToken(c.env.DB, key);
+        if (oauth) {
+          c.set("userId", oauth.userId);
+        }
       }
     }
     await next();

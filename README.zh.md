@@ -49,6 +49,40 @@ npm install -g @littlelittlecloud/dak-cli
 dak search "AI 监管" --category tech
 ```
 
+### MCP 端点（curl + bash）
+
+服务端现已提供带 `api_search` 工具与 OAuth 元数据的 MCP 端点：
+
+- MCP JSON-RPC 端点：`POST https://dak-news.com/mcp`
+- OAuth 授权端点（Authorization Code + PKCE）：`GET https://dak-news.com/oauth/authorize`
+- OAuth 元数据：
+  - `GET https://dak-news.com/.well-known/oauth-protected-resource`
+  - `GET https://dak-news.com/.well-known/oauth-authorization-server`
+- OAuth 动态客户端注册（公开 PKCE 客户端）：`POST https://dak-news.com/oauth/register`
+
+MCP 工具包括：
+- `api_search`
+- `api_digest_subscribe`
+- `api_digest_editions`
+- `api_digest_edition`
+
+示例（列出工具）：
+
+```bash
+curl -sS https://dak-news.com/mcp \
+  -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jq
+```
+
+示例（调用 `api_search`）：
+
+```bash
+curl -sS https://dak-news.com/mcp \
+  -H 'content-type: application/json' \
+  -H "authorization: ******" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"api_search","arguments":{"q":"关税","category":"finance","limit":5}}}' | jq
+```
+
 ---
 
 ## 典型使用场景

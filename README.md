@@ -49,6 +49,40 @@ npm install -g @littlelittlecloud/dak-cli
 dak search "AI regulation" --category tech
 ```
 
+### MCP endpoint (curl + bash)
+
+The server now exposes an MCP endpoint with the `api_search` tool and OAuth metadata:
+
+- MCP JSON-RPC endpoint: `POST https://dak-news.com/mcp`
+- OAuth authorization endpoint (Authorization Code + PKCE): `GET https://dak-news.com/oauth/authorize`
+- OAuth metadata:
+  - `GET https://dak-news.com/.well-known/oauth-protected-resource`
+  - `GET https://dak-news.com/.well-known/oauth-authorization-server`
+- OAuth dynamic client registration (public PKCE clients): `POST https://dak-news.com/oauth/register`
+
+MCP tools include:
+- `api_search`
+- `api_digest_subscribe`
+- `api_digest_editions`
+- `api_digest_edition`
+
+Example (list tools):
+
+```bash
+curl -sS https://dak-news.com/mcp \
+  -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jq
+```
+
+Example (`api_search` call):
+
+```bash
+curl -sS https://dak-news.com/mcp \
+  -H 'content-type: application/json' \
+  -H "authorization: ******" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"api_search","arguments":{"q":"tariff","category":"finance","limit":5}}}' | jq
+```
+
 ---
 
 ## Use Cases
