@@ -39,12 +39,14 @@ mcpRoutes.get("/mcp", (c) => {
 });
 
 mcpRoutes.post("/mcp", async (c) => {
-  const body = await c.req.json().catch(() => null) as JsonRpcRequest | null;
-  if (!body || body.jsonrpc !== "2.0" || typeof body.method !== "string") {
-    return c.json(jsonRpcError(null, -32600, "Invalid Request"), 400);
+  const body = await c.req.json().catch(() => null) as JsonRpcRequest | JsonRpcRequest[] | null;
+  if (!body || Array.isArray(body) || body.jsonrpc !== "2.0" || typeof body.method !== "string") {
+    return c.json(jsonRpcError(null, -32600, "Invalid Request"));
   }
+  const notification = body.id === undefined;
 
   if (body.method === "initialize") {
+    if (notification) return c.body(null, 202);
     return c.json(
       jsonRpcResult(body.id, {
         protocolVersion: "2024-11-05",
@@ -57,7 +59,17 @@ mcpRoutes.post("/mcp", async (c) => {
     );
   }
 
+  if (body.method === "notifications/initialized") {
+    return c.body(null, 202);
+  }
+
+  if (body.method === "ping") {
+    if (notification) return c.body(null, 202);
+    return c.json(jsonRpcResult(body.id, {}));
+  }
+
   if (body.method === "tools/list") {
+    if (notification) return c.body(null, 202);
     return c.json(jsonRpcResult(body.id, { tools: [API_SEARCH_TOOL] }));
   }
 
@@ -65,12 +77,12 @@ mcpRoutes.post("/mcp", async (c) => {
     const params = body.params ?? {};
     const toolName = typeof params.name === "string" ? params.name : "";
     if (toolName !== "api_search") {
-      return c.json(jsonRpcError(body.id, -32601, `Tool not found: ${toolName || "(empty)"}`), 404);
+      return c.json(jsonRpcError(body.id, -32601, `Tool not found: ${toolName || "(empty)"}`));
     }
 
     const parsed = SearchRequestSchema.safeParse(params.arguments ?? {});
     if (!parsed.success) {
-      return c.json(jsonRpcError(body.id, -32602, parsed.error.issues.map((i) => i.message).join("; ")), 400);
+      return c.json(jsonRpcError(body.id, -32602, parsed.error.issues.map((i) => i.message).join("; ")));
     }
 
     const maxAge = c.get("maxAge") as string | null;
@@ -102,7 +114,8 @@ mcpRoutes.post("/mcp", async (c) => {
     );
   }
 
-  return c.json(jsonRpcError(body.id, -32601, `Method not found: ${body.method}`), 404);
+  if (notification) return c.body(null, 202);
+  return c.json(jsonRpcError(body.id, -32601, `Method not found: ${body.method}`));
 });
 
 // OAuth 2.0 protected-resource metadata (RFC 9728)
