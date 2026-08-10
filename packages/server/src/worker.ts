@@ -8,6 +8,7 @@ import { authRoutes } from "./routes/auth";
 import { digestRoutes } from "./routes/digest";
 import { userDigestRoutes } from "./routes/user-digests";
 import { seoRoutes, entryMetaMiddleware } from "./routes/seo";
+import { mcpRoutes } from "./routes/mcp";
 import { errorHandler } from "./middleware/error";
 import { tierMiddleware } from "./middleware/tier";
 import { llmAgentMiddleware } from "./middleware/llm-agent";
@@ -27,6 +28,8 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 // Tier middleware for API routes (session + API key + rate limit)
 app.use("/api/*", llmAgentMiddleware());
 app.use("/api/*", tierMiddleware());
+app.use("/mcp", llmAgentMiddleware());
+app.use("/mcp", tierMiddleware());
 app.onError(errorHandler);
 
 // API routes
@@ -37,6 +40,7 @@ app.route("/api", ingestRoutes);
 app.route("/api", authRoutes);
 app.route("/api", digestRoutes);
 app.route("/api", userDigestRoutes);
+app.route("/", mcpRoutes);
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));
