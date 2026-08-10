@@ -54,6 +54,7 @@ dak search "AI 监管" --category tech
 服务端现已提供带 `api_search` 工具与 OAuth 元数据的 MCP 端点：
 
 - MCP JSON-RPC 端点：`POST https://dak-news.com/mcp`
+- OAuth 授权端点（Authorization Code + PKCE）：`GET https://dak-news.com/oauth/authorize`
 - OAuth 元数据：
   - `GET https://dak-news.com/.well-known/oauth-protected-resource`
   - `GET https://dak-news.com/.well-known/oauth-authorization-server`

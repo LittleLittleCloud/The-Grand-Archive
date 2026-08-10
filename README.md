@@ -54,6 +54,7 @@ dak search "AI regulation" --category tech
 The server now exposes an MCP endpoint with the `api_search` tool and OAuth metadata:
 
 - MCP JSON-RPC endpoint: `POST https://dak-news.com/mcp`
+- OAuth authorization endpoint (Authorization Code + PKCE): `GET https://dak-news.com/oauth/authorize`
 - OAuth metadata:
   - `GET https://dak-news.com/.well-known/oauth-protected-resource`
   - `GET https://dak-news.com/.well-known/oauth-authorization-server`

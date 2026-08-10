@@ -22,6 +22,10 @@ function GoogleIcon() {
 }
 
 export function LoginPage() {
+  const search = new URLSearchParams(window.location.search);
+  const returnTo = sanitizeReturnTo(search.get("return_to"));
+  const callbackURL = `${window.location.origin}${returnTo}`;
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,7 +53,7 @@ export function LoginPage() {
         }
         setError(authError.message ?? "Invalid username or password");
       } else {
-        navigate("/");
+        navigate(returnTo);
       }
     } catch (err) {
       setError((err as Error).message);
@@ -59,12 +63,12 @@ export function LoginPage() {
   }
 
   async function handleGitHub() {
-    const { error: e } = await signIn.social({ provider: "github", callbackURL: window.location.origin });
+    const { error: e } = await signIn.social({ provider: "github", callbackURL });
     if (e) setError(e.message ?? "GitHub sign-in failed");
   }
 
   async function handleGoogle() {
-    const { error: e } = await signIn.social({ provider: "google", callbackURL: window.location.origin });
+    const { error: e } = await signIn.social({ provider: "google", callbackURL });
     if (e) setError(e.message ?? "Google sign-in failed");
   }
 
@@ -76,7 +80,7 @@ export function LoginPage() {
     try {
       const { error: authError } = await signIn.magicLink({
         email: magicEmail.trim(),
-        callbackURL: window.location.origin,
+        callbackURL,
       });
       if (authError) {
         setError(authError.message ?? "Failed to send sign-in link");
@@ -245,4 +249,10 @@ export function LoginPage() {
       </div>
     </div>
   );
+}
+
+function sanitizeReturnTo(value: string | null): string {
+  if (!value) return "/";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/";
+  return value;
 }
