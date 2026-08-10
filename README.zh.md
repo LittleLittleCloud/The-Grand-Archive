@@ -60,6 +60,12 @@ dak search "AI 监管" --category tech
   - `GET https://dak-news.com/.well-known/oauth-authorization-server`
 - OAuth 动态客户端注册（公开 PKCE 客户端）：`POST https://dak-news.com/oauth/register`
 
+MCP 工具包括：
+- `api_search`
+- `api_digest_subscribe`
+- `api_digest_editions`
+- `api_digest_edition`
+
 示例（列出工具）：
 
 ```bash

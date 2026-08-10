@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { SearchRequestSchema } from "@dak/contract";
+import { SearchRequestSchema, DigestSubscribeRequestSchema, DigestLangSchema, type DigestLang, type DigestSection } from "@dak/contract";
 import type { HonoEnv } from "../types";
 import { search } from "../search/engine";
 import { hashApiKey, verifyApiKey } from "../auth/api-key";
@@ -26,6 +26,54 @@ const API_SEARCH_TOOL = {
     required: ["q"],
   },
 } as const;
+
+const API_DIGEST_SUBSCRIBE_TOOL = {
+  name: "api_digest_subscribe",
+  description: "Subscribe an email to The Grand Archive daily digest (double opt-in).",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      email: { type: "string", format: "email" },
+      lang: { type: "string", enum: ["en", "zh"], default: "en" },
+    },
+    required: ["email"],
+  },
+} as const;
+
+const API_DIGEST_EDITIONS_TOOL = {
+  name: "api_digest_editions",
+  description: "List published digest editions.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      lang: { type: "string", enum: ["en", "zh"] },
+      limit: { type: "number", minimum: 1, maximum: 200, default: 60 },
+    },
+  },
+} as const;
+
+const API_DIGEST_EDITION_TOOL = {
+  name: "api_digest_edition",
+  description: "Read one published digest edition by date and language.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD" },
+      lang: { type: "string", enum: ["en", "zh"] },
+    },
+    required: ["date", "lang"],
+  },
+} as const;
+
+const MCP_TOOLS = [
+  API_SEARCH_TOOL,
+  API_DIGEST_SUBSCRIBE_TOOL,
+  API_DIGEST_EDITIONS_TOOL,
+  API_DIGEST_EDITION_TOOL,
+] as const;
 
 mcpRoutes.get("/mcp", (c) => {
   return c.json({
@@ -72,48 +120,145 @@ mcpRoutes.post("/mcp", async (c) => {
 
   if (body.method === "tools/list") {
     if (notification) return c.body(null, 202);
-    return c.json(jsonRpcResult(body.id, { tools: [API_SEARCH_TOOL] }));
+    return c.json(jsonRpcResult(body.id, { tools: MCP_TOOLS }));
   }
 
   if (body.method === "tools/call") {
     const params = body.params ?? {};
     const toolName = typeof params.name === "string" ? params.name : "";
-    if (toolName !== "api_search") {
-      return c.json(jsonRpcError(body.id, -32601, `Tool not found: ${toolName || "(empty)"}`));
+    if (toolName === "api_search") {
+      const parsed = SearchRequestSchema.safeParse(params.arguments ?? {});
+      if (!parsed.success) {
+        return c.json(jsonRpcError(body.id, -32602, parsed.error.issues.map((i) => i.message).join("; ")));
+      }
+
+      const maxAge = c.get("maxAge") as string | null;
+      const tier = (c.get("tier") as "anonymous" | "free" | "premium") ?? "anonymous";
+      const { q, category, source, from, to, limit, offset } = parsed.data;
+      const result = await search(c.env.DB, q, {
+        category,
+        source,
+        from,
+        to,
+        maxAge: maxAge ?? undefined,
+        limit,
+        offset,
+      });
+
+      const payload = {
+        results: result.results,
+        total: result.total,
+        query: q,
+        tier,
+        tierCutoff: result.tierFiltered ? maxAge : null,
+      };
+      return c.json(jsonRpcResult(body.id, asToolResult(payload)));
     }
 
-    const parsed = SearchRequestSchema.safeParse(params.arguments ?? {});
-    if (!parsed.success) {
-      return c.json(jsonRpcError(body.id, -32602, parsed.error.issues.map((i) => i.message).join("; ")));
+    if (toolName === "api_digest_subscribe") {
+      const parsed = DigestSubscribeRequestSchema.safeParse(params.arguments ?? {});
+      if (!parsed.success) {
+        return c.json(jsonRpcError(body.id, -32602, parsed.error.issues.map((i) => i.message).join("; ")));
+      }
+
+      const email = parsed.data.email.trim().toLowerCase();
+      const lang = parsed.data.lang;
+      const userId = (c.get("userId") as string | undefined) ?? null;
+      const existing = await c.env.DB
+        .prepare("SELECT id, status FROM subscribers WHERE email = ?")
+        .bind(email)
+        .first<{ id: string; status: string }>();
+      if (existing?.status === "active") {
+        return c.json(jsonRpcResult(body.id, asToolResult({ status: "active", message: "You are already subscribed." })));
+      }
+      const confirmToken = crypto.randomUUID();
+      if (existing) {
+        await c.env.DB
+          .prepare(
+            "UPDATE subscribers SET lang = ?, status = 'pending', confirm_token = ?, user_id = COALESCE(?, user_id) WHERE id = ?"
+          )
+          .bind(lang, confirmToken, userId, existing.id)
+          .run();
+      } else {
+        await c.env.DB
+          .prepare(
+            "INSERT INTO subscribers (email, lang, status, confirm_token, user_id) VALUES (?, ?, 'pending', ?, ?)"
+          )
+          .bind(email, lang, confirmToken, userId)
+          .run();
+      }
+      return c.json(
+        jsonRpcResult(
+          body.id,
+          asToolResult({
+            status: "pending",
+            message: "Almost there — check your inbox to confirm your subscription.",
+          })
+        )
+      );
     }
 
-    const maxAge = c.get("maxAge") as string | null;
-    const tier = (c.get("tier") as "anonymous" | "free" | "premium") ?? "anonymous";
-    const { q, category, source, from, to, limit, offset } = parsed.data;
-    const result = await search(c.env.DB, q, {
-      category,
-      source,
-      from,
-      to,
-      maxAge: maxAge ?? undefined,
-      limit,
-      offset,
-    });
+    if (toolName === "api_digest_editions") {
+      const args = objectArgs(params.arguments);
+      const lang = DigestLangSchema.safeParse(args.lang);
+      const limit = Math.min(Math.max(Number(args.limit) || 60, 1), 200);
+      let stmt;
+      if (lang.success) {
+        stmt = c.env.DB.prepare(
+          "SELECT date, lang, title, summary FROM digest_editions WHERE status = 'published' AND lang = ? ORDER BY date DESC LIMIT ?"
+        ).bind(lang.data, limit);
+      } else {
+        stmt = c.env.DB.prepare(
+          "SELECT date, lang, title, summary FROM digest_editions WHERE status = 'published' ORDER BY date DESC, lang LIMIT ?"
+        ).bind(limit);
+      }
+      const editions = (await stmt.all()).results ?? [];
+      return c.json(jsonRpcResult(body.id, asToolResult({ editions })));
+    }
 
-    const payload = {
-      results: result.results,
-      total: result.total,
-      query: q,
-      tier,
-      tierCutoff: result.tierFiltered ? maxAge : null,
-    };
+    if (toolName === "api_digest_edition") {
+      const args = objectArgs(params.arguments);
+      const date = valueAsString(args.date);
+      const langParsed = DigestLangSchema.safeParse(args.lang);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !langParsed.success) {
+        return c.json(jsonRpcError(body.id, -32602, "date must be YYYY-MM-DD and lang must be 'en' or 'zh'."));
+      }
+      const row = await c.env.DB.prepare(
+        "SELECT date, lang, title, summary, html, sections_json, created_at FROM digest_editions WHERE date = ? AND lang = ? AND status = 'published'"
+      )
+        .bind(date, langParsed.data)
+        .first<{
+          date: string;
+          lang: DigestLang;
+          title: string;
+          summary: string | null;
+          html: string;
+          sections_json: string | null;
+          created_at: string;
+        }>();
+      if (!row) return c.json(jsonRpcError(body.id, -32004, "Digest edition not found."));
 
-    return c.json(
-      jsonRpcResult(body.id, {
-        content: [{ type: "text", text: JSON.stringify(payload) }],
-        structuredContent: payload,
-      })
-    );
+      let sections: DigestSection[] = [];
+      if (row.sections_json) {
+        try {
+          sections = JSON.parse(row.sections_json) as DigestSection[];
+        } catch {
+          sections = [];
+        }
+      }
+      const payload = {
+        date: row.date,
+        lang: row.lang,
+        title: row.title,
+        summary: row.summary,
+        html: row.html,
+        sections,
+        created_at: row.created_at,
+      };
+      return c.json(jsonRpcResult(body.id, asToolResult(payload)));
+    }
+
+    return c.json(jsonRpcError(body.id, -32601, `Tool not found: ${toolName || "(empty)"}`));
   }
 
   if (notification) return c.body(null, 202);
@@ -366,6 +511,11 @@ function valueAsString(value: unknown): string {
   return "";
 }
 
+function objectArgs(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
 function asStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string");
   return [];
@@ -440,4 +590,11 @@ function jsonRpcResult(id: JsonRpcRequest["id"], result: unknown) {
 
 function jsonRpcError(id: JsonRpcRequest["id"], code: number, message: string) {
   return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
+}
+
+function asToolResult(payload: unknown) {
+  return {
+    content: [{ type: "text", text: JSON.stringify(payload) }],
+    structuredContent: payload,
+  };
 }
