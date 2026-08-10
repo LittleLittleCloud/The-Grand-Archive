@@ -51,7 +51,7 @@ dak search "AI regulation" --category tech
 
 ### MCP endpoint (curl + bash)
 
-The server now exposes an MCP endpoint with the `api_search` tool and OAuth metadata:
+The server now exposes an MCP endpoint with the `dak_search` tool and OAuth metadata:
 
 - MCP JSON-RPC endpoint: `POST https://dak-news.com/mcp`
 - OAuth authorization endpoint (Authorization Code + PKCE): `GET https://dak-news.com/oauth/authorize`
@@ -60,11 +60,15 @@ The server now exposes an MCP endpoint with the `api_search` tool and OAuth meta
   - `GET https://dak-news.com/.well-known/oauth-authorization-server`
 - OAuth dynamic client registration (public PKCE clients): `POST https://dak-news.com/oauth/register`
 
-MCP tools include:
-- `api_search`
-- `api_digest_subscribe`
-- `api_digest_editions`
-- `api_digest_edition`
+MCP tools (all names are prefixed with `dak_`):
+- `dak_search`
+- `dak_digest_subscribe`
+- `dak_digest_editions`
+- `dak_digest_edition`
+- `dak_api_key_create` — create an API key for the signed-in account (returned once)
+- `dak_digest_publish` — generate and publish a digest edition (admin only)
+
+The legacy `api_*` tool names still resolve to their `dak_*` equivalents.
 
 Example (list tools):
 
@@ -74,13 +78,13 @@ curl -sS https://dak-news.com/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jq
 ```
 
-Example (`api_search` call):
+Example (`dak_search` call):
 
 ```bash
 curl -sS https://dak-news.com/mcp \
   -H 'content-type: application/json' \
   -H "authorization: ******" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"api_search","arguments":{"q":"tariff","category":"finance","limit":5}}}' | jq
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"dak_search","arguments":{"q":"tariff","category":"finance","limit":5}}}' | jq
 ```
 
 ---

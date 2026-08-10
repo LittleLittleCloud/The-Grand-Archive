@@ -1,15 +1,23 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { SearchRequestSchema, DigestSubscribeRequestSchema, DigestLangSchema, type DigestLang, type DigestSection } from "@dak/contract";
+import {
+  SearchRequestSchema,
+  DigestSubscribeRequestSchema,
+  DigestLangSchema,
+  ApiKeyCreateRequestSchema,
+  type DigestLang,
+  type DigestSection,
+} from "@dak/contract";
 import type { HonoEnv } from "../types";
 import { search } from "../search/engine";
-import { hashApiKey, verifyApiKey } from "../auth/api-key";
+import { generateApiKey, hashApiKey, verifyApiKey } from "../auth/api-key";
 import { createAuth } from "../auth/better-auth";
+import { isDigestAdmin, triggerDigestRun } from "./digest";
 
 export const mcpRoutes = new Hono<HonoEnv>();
 
-const API_SEARCH_TOOL = {
-  name: "api_search",
+const DAK_SEARCH_TOOL = {
+  name: "dak_search",
   description: "Search the Grand Archive news index with optional category/source/date filters.",
   inputSchema: {
     type: "object",
@@ -27,8 +35,8 @@ const API_SEARCH_TOOL = {
   },
 } as const;
 
-const API_DIGEST_SUBSCRIBE_TOOL = {
-  name: "api_digest_subscribe",
+const DAK_DIGEST_SUBSCRIBE_TOOL = {
+  name: "dak_digest_subscribe",
   description: "Subscribe an email to The Grand Archive daily digest (double opt-in).",
   inputSchema: {
     type: "object",
@@ -41,8 +49,8 @@ const API_DIGEST_SUBSCRIBE_TOOL = {
   },
 } as const;
 
-const API_DIGEST_EDITIONS_TOOL = {
-  name: "api_digest_editions",
+const DAK_DIGEST_EDITIONS_TOOL = {
+  name: "dak_digest_editions",
   description: "List published digest editions.",
   inputSchema: {
     type: "object",
@@ -54,8 +62,8 @@ const API_DIGEST_EDITIONS_TOOL = {
   },
 } as const;
 
-const API_DIGEST_EDITION_TOOL = {
-  name: "api_digest_edition",
+const DAK_DIGEST_EDITION_TOOL = {
+  name: "dak_digest_edition",
   description: "Read one published digest edition by date and language.",
   inputSchema: {
     type: "object",
@@ -68,12 +76,50 @@ const API_DIGEST_EDITION_TOOL = {
   },
 } as const;
 
+const DAK_API_KEY_CREATE_TOOL = {
+  name: "dak_api_key_create",
+  description:
+    "Create a new Grand Archive API key for the signed-in account. The plaintext key is returned once and cannot be retrieved again.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      name: { type: "string", minLength: 1, maxLength: 64, description: "Label for the new API key" },
+    },
+    required: ["name"],
+  },
+} as const;
+
+const DAK_DIGEST_PUBLISH_TOOL = {
+  name: "dak_digest_publish",
+  description:
+    "Generate and publish a digest edition (admin only). Defaults to today and both languages.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD (defaults to today)" },
+      lang: { type: "string", enum: ["en", "zh"], description: "Limit the run to one language" },
+    },
+  },
+} as const;
+
 const MCP_TOOLS = [
-  API_SEARCH_TOOL,
-  API_DIGEST_SUBSCRIBE_TOOL,
-  API_DIGEST_EDITIONS_TOOL,
-  API_DIGEST_EDITION_TOOL,
+  DAK_SEARCH_TOOL,
+  DAK_DIGEST_SUBSCRIBE_TOOL,
+  DAK_DIGEST_EDITIONS_TOOL,
+  DAK_DIGEST_EDITION_TOOL,
+  DAK_API_KEY_CREATE_TOOL,
+  DAK_DIGEST_PUBLISH_TOOL,
 ] as const;
+
+/** Legacy `api_*` tool names kept working for clients pinned to the old list. */
+const LEGACY_TOOL_ALIASES: Record<string, string> = {
+  api_search: "dak_search",
+  api_digest_subscribe: "dak_digest_subscribe",
+  api_digest_editions: "dak_digest_editions",
+  api_digest_edition: "dak_digest_edition",
+};
 
 mcpRoutes.get("/mcp", (c) => {
   return c.json({
@@ -125,8 +171,9 @@ mcpRoutes.post("/mcp", async (c) => {
 
   if (body.method === "tools/call") {
     const params = body.params ?? {};
-    const toolName = typeof params.name === "string" ? params.name : "";
-    if (toolName === "api_search") {
+    const requestedTool = typeof params.name === "string" ? params.name : "";
+    const toolName = LEGACY_TOOL_ALIASES[requestedTool] ?? requestedTool;
+    if (toolName === "dak_search") {
       const parsed = SearchRequestSchema.safeParse(params.arguments ?? {});
       if (!parsed.success) {
         return c.json(jsonRpcError(body.id, -32602, parsed.error.issues.map((i) => i.message).join("; ")));
@@ -155,7 +202,7 @@ mcpRoutes.post("/mcp", async (c) => {
       return c.json(jsonRpcResult(body.id, asToolResult(payload)));
     }
 
-    if (toolName === "api_digest_subscribe") {
+    if (toolName === "dak_digest_subscribe") {
       const parsed = DigestSubscribeRequestSchema.safeParse(params.arguments ?? {});
       if (!parsed.success) {
         return c.json(jsonRpcError(body.id, -32602, parsed.error.issues.map((i) => i.message).join("; ")));
@@ -198,7 +245,7 @@ mcpRoutes.post("/mcp", async (c) => {
       );
     }
 
-    if (toolName === "api_digest_editions") {
+    if (toolName === "dak_digest_editions") {
       const args = objectArgs(params.arguments);
       const lang = DigestLangSchema.safeParse(args.lang);
       const limit = Math.min(Math.max(Number(args.limit) || 60, 1), 200);
@@ -216,7 +263,7 @@ mcpRoutes.post("/mcp", async (c) => {
       return c.json(jsonRpcResult(body.id, asToolResult({ editions })));
     }
 
-    if (toolName === "api_digest_edition") {
+    if (toolName === "dak_digest_edition") {
       const args = objectArgs(params.arguments);
       const date = valueAsString(args.date);
       const langParsed = DigestLangSchema.safeParse(args.lang);
@@ -258,7 +305,60 @@ mcpRoutes.post("/mcp", async (c) => {
       return c.json(jsonRpcResult(body.id, asToolResult(payload)));
     }
 
-    return c.json(jsonRpcError(body.id, -32601, `Tool not found: ${toolName || "(empty)"}`));
+    if (toolName === "dak_api_key_create") {
+      const userId = c.get("userId") as string | undefined;
+      if (!userId) {
+        return c.json(jsonRpcError(body.id, -32001, "Sign in (OAuth or API key) to create an API key."));
+      }
+      const parsed = ApiKeyCreateRequestSchema.safeParse(params.arguments ?? {});
+      if (!parsed.success) {
+        return c.json(jsonRpcError(body.id, -32602, parsed.error.issues.map((i) => i.message).join("; ")));
+      }
+
+      const { key, prefix, hash } = await generateApiKey();
+      const id = crypto.randomUUID();
+      await c.env.DB.prepare(
+        "INSERT INTO api_keys (id, user_id, name, prefix, hash) VALUES (?, ?, ?, ?, ?)"
+      )
+        .bind(id, userId, parsed.data.name, prefix, hash)
+        .run();
+
+      return c.json(
+        jsonRpcResult(
+          body.id,
+          asToolResult({
+            id,
+            name: parsed.data.name,
+            prefix,
+            key,
+            message: "Store this key now — it is shown only once.",
+          })
+        )
+      );
+    }
+
+    if (toolName === "dak_digest_publish") {
+      if (!(await isDigestAdmin(c))) {
+        return c.json(jsonRpcError(body.id, -32003, "Publishing a digest requires an admin account."));
+      }
+      const args = objectArgs(params.arguments);
+      const date = valueAsString(args.date);
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return c.json(jsonRpcError(body.id, -32602, "date must be YYYY-MM-DD."));
+      }
+      const lang = valueAsString(args.lang);
+      if (lang && !DigestLangSchema.safeParse(lang).success) {
+        return c.json(jsonRpcError(body.id, -32602, "lang must be 'en' or 'zh'."));
+      }
+
+      const result = await triggerDigestRun(c, { date: date || undefined, lang: lang || undefined });
+      if (!result.ok) {
+        return c.json(jsonRpcError(body.id, -32005, result.error));
+      }
+      return c.json(jsonRpcResult(body.id, asToolResult({ status: "started", ...result.data })));
+    }
+
+    return c.json(jsonRpcError(body.id, -32601, `Tool not found: ${requestedTool || "(empty)"}`));
   }
 
   if (notification) return c.body(null, 202);

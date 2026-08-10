@@ -241,7 +241,7 @@ digestRoutes.get("/digest/editions/:date/:lang", async (c) => {
 // Gated by INGEST_ALLOWED_USERS (same admin list as ingest). The server calls
 // the digest worker's token-guarded /run endpoint, which starts the Workflow.
 
-function isDigestAdmin(c: Context<HonoEnv>): Promise<boolean> {
+export function isDigestAdmin(c: Context<HonoEnv>): Promise<boolean> {
   const allowed = (c.env.INGEST_ALLOWED_USERS ?? "").split(",").filter(Boolean);
   const userId = c.get("userId") as string | undefined;
   if (!userId) return Promise.resolve(false);
@@ -257,25 +257,25 @@ digestRoutes.get("/admin/digest", async (c) => {
   return c.json({ canTrigger: await isDigestAdmin(c) });
 });
 
-/** Kick off a digest run (defaults to today, both languages). */
-digestRoutes.post("/admin/digest/run", async (c) => {
-  if (!(await isDigestAdmin(c))) {
-    return c.json({ error: "Forbidden", code: "NOT_ALLOWED" }, 403);
-  }
+/** Result of asking the digest worker to build + publish an edition. */
+export type DigestRunResult =
+  | { ok: true; data: Record<string, unknown> }
+  | { ok: false; code: "NOT_CONFIGURED" | "TRIGGER_FAILED" | "TRIGGER_UNREACHABLE"; error: string; status: 502 | 503 };
 
+/** Ask the digest worker to run (and publish) a digest. Caller must authorize. */
+export async function triggerDigestRun(
+  c: Context<HonoEnv>,
+  options: { date?: string; lang?: string } = {}
+): Promise<DigestRunResult> {
   const base = c.env.DIGEST_WORKER_URL;
   const token = c.env.DIGEST_TRIGGER_TOKEN;
   if (!base || !token) {
-    return c.json(
-      { error: "Digest trigger not configured", code: "NOT_CONFIGURED" },
-      503
-    );
+    return { ok: false, code: "NOT_CONFIGURED", error: "Digest trigger not configured", status: 503 };
   }
 
-  const body = (await c.req.json().catch(() => ({}))) as { date?: string; lang?: string };
   const target = new URL(`${base.replace(/\/$/, "")}/run`);
-  if (body.date) target.searchParams.set("date", body.date);
-  if (body.lang === "en" || body.lang === "zh") target.searchParams.set("lang", body.lang);
+  if (options.date) target.searchParams.set("date", options.date);
+  if (options.lang === "en" || options.lang === "zh") target.searchParams.set("lang", options.lang);
 
   try {
     const res = await fetch(target.toString(), {
@@ -284,11 +284,24 @@ digestRoutes.post("/admin/digest/run", async (c) => {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return c.json({ error: "Digest worker rejected the run", code: "TRIGGER_FAILED" }, 502);
+      return { ok: false, code: "TRIGGER_FAILED", error: "Digest worker rejected the run", status: 502 };
     }
-    return c.json(data as Record<string, unknown>);
+    return { ok: true, data: data as Record<string, unknown> };
   } catch {
-    return c.json({ error: "Could not reach the digest worker", code: "TRIGGER_UNREACHABLE" }, 502);
+    return { ok: false, code: "TRIGGER_UNREACHABLE", error: "Could not reach the digest worker", status: 502 };
   }
-});
+}
 
+/** Kick off a digest run (defaults to today, both languages). */
+digestRoutes.post("/admin/digest/run", async (c) => {
+  if (!(await isDigestAdmin(c))) {
+    return c.json({ error: "Forbidden", code: "NOT_ALLOWED" }, 403);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { date?: string; lang?: string };
+  const result = await triggerDigestRun(c, { date: body.date, lang: body.lang });
+  if (!result.ok) {
+    return c.json({ error: result.error, code: result.code }, result.status);
+  }
+  return c.json(result.data);
+});
