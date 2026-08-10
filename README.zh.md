@@ -58,6 +58,7 @@ dak search "AI 监管" --category tech
 - OAuth 元数据：
   - `GET https://dak-news.com/.well-known/oauth-protected-resource`
   - `GET https://dak-news.com/.well-known/oauth-authorization-server`
+- OAuth 动态客户端注册（公开 PKCE 客户端）：`POST https://dak-news.com/oauth/register`
 
 示例（列出工具）：
 

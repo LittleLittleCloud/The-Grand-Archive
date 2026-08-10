@@ -126,6 +126,7 @@ mcpRoutes.get("/.well-known/oauth-protected-resource", (c) => {
   return c.json({
     resource: `${base}/mcp`,
     authorization_servers: [base],
+    authorization_server: base,
     bearer_methods_supported: ["header"],
     scopes_supported: ["api_search"],
   });
@@ -138,12 +139,62 @@ mcpRoutes.get("/.well-known/oauth-authorization-server", (c) => {
     issuer: base,
     authorization_endpoint: `${base}/oauth/authorize`,
     token_endpoint: `${base}/oauth/token`,
+    registration_endpoint: `${base}/oauth/register`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code", "client_credentials"],
     token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
+    registration_endpoint_auth_methods_supported: ["none"],
     code_challenge_methods_supported: ["S256", "plain"],
     scopes_supported: ["api_search"],
   });
+});
+
+// OAuth 2.0 dynamic client registration (RFC 7591) for public PKCE clients.
+mcpRoutes.post("/oauth/register", async (c) => {
+  const payload = c.req.header("content-type")?.includes("application/json")
+    ? await c.req.json().catch(() => ({}))
+    : await c.req.parseBody();
+
+  const redirectUris = asStringArray(payload.redirect_uris).filter(isAllowedRedirectUri);
+  if (redirectUris.length === 0) {
+    return c.json({ error: "invalid_redirect_uri" }, 400);
+  }
+
+  const tokenEndpointAuthMethod = valueAsString(payload.token_endpoint_auth_method) || "none";
+  if (tokenEndpointAuthMethod !== "none") {
+    return c.json({ error: "invalid_client_metadata" }, 400);
+  }
+
+  const clientId = randomToken("dak_client");
+  const clientName = valueAsString(payload.client_name);
+  const grantTypes = ["authorization_code"];
+  const responseTypes = ["code"];
+
+  await c.env.DB.prepare(
+    `INSERT INTO oauth_clients
+      (id, client_id, client_name, redirect_uris, grant_types, response_types, token_endpoint_auth_method)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      crypto.randomUUID(),
+      clientId,
+      clientName || null,
+      JSON.stringify(redirectUris),
+      JSON.stringify(grantTypes),
+      JSON.stringify(responseTypes),
+      tokenEndpointAuthMethod
+    )
+    .run();
+
+  return c.json({
+    client_id: clientId,
+    client_id_issued_at: Math.floor(Date.now() / 1000),
+    client_name: clientName || undefined,
+    redirect_uris: redirectUris,
+    grant_types: grantTypes,
+    response_types: responseTypes,
+    token_endpoint_auth_method: tokenEndpointAuthMethod,
+  }, 201);
 });
 
 // OAuth 2.1 Authorization Code + PKCE endpoint (browser login flow).
@@ -168,6 +219,17 @@ mcpRoutes.get("/oauth/authorize", async (c) => {
   }
   if (codeChallengeMethod !== "S256" && codeChallengeMethod !== "PLAIN") {
     return oauthAuthorizeError(c, redirectUri, "invalid_request", state, "Unsupported code_challenge_method.");
+  }
+  const registeredClient = await c.env.DB.prepare(
+    "SELECT redirect_uris FROM oauth_clients WHERE client_id = ?"
+  )
+    .bind(clientId)
+    .first<{ redirect_uris: string | null }>();
+  if (registeredClient?.redirect_uris) {
+    const allowedRedirectUris = safeParseStringArray(registeredClient.redirect_uris);
+    if (!allowedRedirectUris.includes(redirectUri)) {
+      return oauthAuthorizeError(c, redirectUri, "invalid_request", state, "Unregistered redirect_uri.");
+    }
   }
 
   const auth = createAuth(c.env);
@@ -302,6 +364,20 @@ function valueAsString(value: unknown): string {
   if (typeof value === "string") return value;
   if (Array.isArray(value) && value[0] && typeof value[0] === "string") return value[0];
   return "";
+}
+
+function asStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string");
+  return [];
+}
+
+function safeParseStringArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 async function sha256Base64Url(value: string): Promise<string> {

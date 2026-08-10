@@ -58,6 +58,7 @@ The server now exposes an MCP endpoint with the `api_search` tool and OAuth meta
 - OAuth metadata:
   - `GET https://dak-news.com/.well-known/oauth-protected-resource`
   - `GET https://dak-news.com/.well-known/oauth-authorization-server`
+- OAuth dynamic client registration (public PKCE clients): `POST https://dak-news.com/oauth/register`
 
 Example (list tools):
 
