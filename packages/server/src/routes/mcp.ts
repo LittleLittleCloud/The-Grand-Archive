@@ -50,7 +50,8 @@ const DAK_DIGEST_PUBLISH_TOOL = {
   name: "dak_digest_publish",
   description:
     "Publish a digest owned by the authenticated user. The digest is made public immediately and " +
-    "is readable by anyone with its share link. Requires auth.",
+    "is readable by anyone with its share link. The response includes `shareUrl`, a directly-openable " +
+    "public URL. Requires auth.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
@@ -65,7 +66,9 @@ const DAK_DIGEST_PUBLISH_TOOL = {
 
 const DAK_DIGEST_LIST_TOOL = {
   name: "dak_digest_list",
-  description: "List the authenticated user's digests (newest first). Requires auth.",
+  description:
+    "List the authenticated user's digests (newest first). Each digest includes `shareUrl`, a " +
+    "directly-openable public URL (null for private digests). Requires auth.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
@@ -206,7 +209,7 @@ mcpRoutes.post("/mcp", async (c) => {
         .bind(userId, lang, editionDate, content.title, content.standfirst, JSON.stringify(content), html)
         .first<DigestRow>();
       if (!row) return c.json(jsonRpcError(body.id, -32603, "Insert failed."));
-      return c.json(jsonRpcResult(body.id, asToolResult(toUserDigest(row))));
+      return c.json(jsonRpcResult(body.id, asToolResult(withShareUrl(toUserDigest(row), requestOrigin(c)))));
     }
 
     if (toolName === "dak_digest_list") {
@@ -220,7 +223,10 @@ mcpRoutes.post("/mcp", async (c) => {
             .bind(userId)
             .all<DigestRow>()
         ).results ?? [];
-      return c.json(jsonRpcResult(body.id, asToolResult({ digests: rows.map(toSummary) })));
+      const origin = requestOrigin(c);
+      return c.json(
+        jsonRpcResult(body.id, asToolResult({ digests: rows.map((r) => withShareUrl(toSummary(r), origin)) }))
+      );
     }
 
     if (toolName === "dak_digest_delete") {
@@ -346,5 +352,26 @@ function asToolResult(payload: unknown) {
   return {
     content: [{ type: "text", text: JSON.stringify(payload) }],
     structuredContent: payload,
+  };
+}
+
+/** Absolute origin (scheme + host) of the current request. */
+function requestOrigin(c: Context<HonoEnv>): string {
+  const url = new URL(c.req.url);
+  return `${url.protocol}//${c.req.header("host") ?? url.host}`;
+}
+
+/**
+ * Attach a directly-openable `shareUrl` to a digest. Public digests are readable
+ * at `/d/{shareId}`; private digests get `null` since the share route only
+ * serves public editions.
+ */
+function withShareUrl<T extends { shareId: string; visibility: "private" | "public" }>(
+  digest: T,
+  origin: string
+): T & { shareUrl: string | null } {
+  return {
+    ...digest,
+    shareUrl: digest.visibility === "public" ? `${origin}/d/${digest.shareId}` : null,
   };
 }
