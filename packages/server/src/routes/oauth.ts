@@ -47,19 +47,30 @@ oauthRoutes.post("/oauth/register", async (c) => {
   }
 
   const tokenEndpointAuthMethod = valueAsString(payload.token_endpoint_auth_method) || "none";
-  if (tokenEndpointAuthMethod !== "none") {
+  const ALLOWED_AUTH_METHODS = ["none", "client_secret_post", "client_secret_basic"];
+  if (!ALLOWED_AUTH_METHODS.includes(tokenEndpointAuthMethod)) {
     return c.json({ error: "invalid_client_metadata" }, 400);
   }
+  const isConfidential = tokenEndpointAuthMethod !== "none";
 
   const clientId = randomToken("dak_client");
   const clientName = valueAsString(payload.client_name);
   const grantTypes = ["authorization_code"];
   const responseTypes = ["code"];
 
+  // Confidential clients (e.g. Claude) get a client_secret, shown once and
+  // stored only as a hash. Public clients rely on PKCE alone.
+  let clientSecret: string | null = null;
+  let clientSecretHash: string | null = null;
+  if (isConfidential) {
+    clientSecret = randomToken("dak_cs");
+    clientSecretHash = await hashApiKey(clientSecret);
+  }
+
   await c.env.DB.prepare(
     `INSERT INTO oauth_clients
-      (id, client_id, client_name, redirect_uris, grant_types, response_types, token_endpoint_auth_method)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`
+      (id, client_id, client_name, redirect_uris, grant_types, response_types, token_endpoint_auth_method, client_secret_hash)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       crypto.randomUUID(),
@@ -68,13 +79,17 @@ oauthRoutes.post("/oauth/register", async (c) => {
       JSON.stringify(redirectUris),
       JSON.stringify(grantTypes),
       JSON.stringify(responseTypes),
-      tokenEndpointAuthMethod
+      tokenEndpointAuthMethod,
+      clientSecretHash
     )
     .run();
 
   return c.json({
     client_id: clientId,
     client_id_issued_at: Math.floor(Date.now() / 1000),
+    ...(clientSecret
+      ? { client_secret: clientSecret, client_secret_expires_at: 0 }
+      : {}),
     client_name: clientName || undefined,
     redirect_uris: redirectUris,
     grant_types: grantTypes,
@@ -193,6 +208,19 @@ oauthRoutes.post("/oauth/token", (c) => {
         : row.code_challenge === (await sha256Base64Url(codeVerifier));
       if (!validPkce) return c.json({ error: "invalid_grant" }, 400);
 
+      // Confidential clients must additionally present their client_secret.
+      const registered = await c.env.DB.prepare(
+        "SELECT client_secret_hash FROM oauth_clients WHERE client_id = ?"
+      )
+        .bind(clientId)
+        .first<{ client_secret_hash: string | null }>();
+      if (registered?.client_secret_hash) {
+        const providedSecret = extractClientSecret(c, payload as Record<string, unknown>);
+        if (!providedSecret || (await hashApiKey(providedSecret)) !== registered.client_secret_hash) {
+          return c.json({ error: "invalid_client" }, 401);
+        }
+      }
+
       const consume = await c.env.DB.prepare(
         "UPDATE oauth_authorization_codes SET used_at = datetime('now') WHERE id = ? AND used_at IS NULL"
       )
@@ -249,6 +277,27 @@ function requestBaseUrl(url: string, host?: string): string {
 function valueAsString(value: unknown): string {
   if (typeof value === "string") return value;
   if (Array.isArray(value) && value[0] && typeof value[0] === "string") return value[0];
+  return "";
+}
+
+/**
+ * Extract a client_secret from a token request: either the `client_secret` form
+ * field (client_secret_post) or the password half of an HTTP Basic header
+ * (client_secret_basic).
+ */
+function extractClientSecret(c: Context<HonoEnv>, payload: Record<string, unknown>): string {
+  const fromBody = valueAsString(payload.client_secret);
+  if (fromBody) return fromBody;
+  const auth = c.req.header("authorization");
+  if (auth?.startsWith("Basic ")) {
+    try {
+      const decoded = atob(auth.slice(6));
+      const idx = decoded.indexOf(":");
+      if (idx >= 0) return decoded.slice(idx + 1);
+    } catch {
+      // ignore malformed Basic header
+    }
+  }
   return "";
 }
 
