@@ -92,14 +92,20 @@ export async function searchFts(
     params.push(options.source);
   }
 
-  let tierFiltered = false;
-  const fromDate = options?.maxAge ?? options?.from;
-  if (options?.maxAge) {
-    const userFrom = options?.from;
-    if (!userFrom || options.maxAge > userFrom) {
-      tierFiltered = true;
-    }
+  // Both the tier history floor (maxAge) and the caller's `from` are lower
+  // bounds on the published date, so the effective bound is the *later* (more
+  // restrictive) of the two. Previously this used `maxAge ?? from`, which
+  // silently ignored the caller's `from` whenever a tier cutoff was present
+  // (i.e. for every non-premium tier), so date filtering appeared to do nothing.
+  let fromDate = options?.from;
+  if (options?.maxAge && (!fromDate || options.maxAge > fromDate)) {
+    fromDate = options.maxAge;
   }
+  // The tier truncated history only when its floor is stricter than the
+  // caller's `from` (or the caller supplied none).
+  const tierFiltered =
+    options?.maxAge != null &&
+    (options?.from == null || options.maxAge > options.from);
   if (fromDate) {
     conditions.push("e.published >= ?");
     params.push(fromDate);

@@ -48,7 +48,9 @@ const DAK_SEARCH_TOOL = {
 
 const DAK_DIGEST_PUBLISH_TOOL = {
   name: "dak_digest_publish",
-  description: "Publish a digest owned by the authenticated user. Requires auth.",
+  description:
+    "Publish a digest owned by the authenticated user. The digest is made public immediately and " +
+    "is readable by anyone with its share link. Requires auth.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
@@ -197,8 +199,8 @@ mcpRoutes.post("/mcp", async (c) => {
       const editionDate = date ?? new Date().toISOString().slice(0, 10);
       const html = renderEditionArticle(content, lang);
       const row = await c.env.DB.prepare(
-        `INSERT INTO user_digests (author_id, lang, date, title, summary, content_json, html)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO user_digests (author_id, lang, date, title, summary, content_json, html, visibility, published_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'public', datetime('now'))
          RETURNING *`
       )
         .bind(userId, lang, editionDate, content.title, content.standfirst, JSON.stringify(content), html)
