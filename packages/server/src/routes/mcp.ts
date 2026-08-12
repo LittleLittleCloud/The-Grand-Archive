@@ -23,7 +23,13 @@ const DIGEST_CONTENT_SCHEMA = z.toJSONSchema(DigestContentSchema);
 
 const DAK_SEARCH_TOOL = {
   name: "dak_search",
-  description: "Search the Grand Archive news index with optional category/source/date filters.",
+  description:
+    "Search the Grand Archive news index with optional category/source/date filters. " +
+    "Works without authentication, but the caller's tier affects results: unauthenticated calls run " +
+    "at the anonymous tier (10 req/min, history limited to the last ~28 days). Authenticating with an " +
+    "API key or OAuth raises the limit to the free tier (30 req/min, ~28 days); premium accounts get " +
+    "120 req/min and ~90 days of history. The response reports the resolved `tier`, and sets " +
+    "`tierCutoff` to the cutoff date when older matches were hidden by the tier's history window.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
