@@ -12,6 +12,10 @@ export const ROUTES = {
   API_KEYS: "/api/api-keys",
   API_KEY_BY_ID: "/api/api-keys/:id",
 
+  // OAuth clients (session-protected)
+  OAUTH_CLIENTS: "/api/oauth/clients",
+  OAUTH_CLIENT_BY_ID: "/api/oauth/clients/:clientId",
+
   // Ingest (api-key-protected)
   ENTRIES: "/api/entries",
 

@@ -9,6 +9,7 @@ import { digestRoutes } from "./routes/digest";
 import { userDigestRoutes } from "./routes/user-digests";
 import { seoRoutes, entryMetaMiddleware } from "./routes/seo";
 import { mcpRoutes } from "./routes/mcp";
+import { oauthRoutes } from "./routes/oauth";
 import { errorHandler } from "./middleware/error";
 import { tierMiddleware } from "./middleware/tier";
 import { llmAgentMiddleware } from "./middleware/llm-agent";
@@ -41,6 +42,7 @@ app.route("/api", authRoutes);
 app.route("/api", digestRoutes);
 app.route("/api", userDigestRoutes);
 app.route("/", mcpRoutes);
+app.route("/", oauthRoutes);
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));

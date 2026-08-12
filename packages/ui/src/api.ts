@@ -5,6 +5,8 @@ import type {
   StatsResponse,
   ApiKey,
   ApiKeyCreateResponse,
+  OAuthClient,
+  OAuthClientCreateRequest,
   FeedsStatusResponse,
   DigestLang,
   DigestSubscribeResponse,
@@ -104,6 +106,22 @@ export const api = {
   deleteApiKey: (id: string) =>
     request<{ ok: boolean }>(
       ROUTES.API_KEY_BY_ID.replace(":id", encodeURIComponent(id)),
+      { method: "DELETE" }
+    ),
+
+  // ─── OAuth clients ────────────────────────────────────
+
+  listOAuthClients: () => request<OAuthClient[]>(ROUTES.OAUTH_CLIENTS),
+
+  createOAuthClient: (body: OAuthClientCreateRequest) =>
+    request<OAuthClient>(ROUTES.OAUTH_CLIENTS, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  deleteOAuthClient: (clientId: string) =>
+    request<{ ok: boolean }>(
+      ROUTES.OAUTH_CLIENT_BY_ID.replace(":clientId", encodeURIComponent(clientId)),
       { method: "DELETE" }
     ),
 

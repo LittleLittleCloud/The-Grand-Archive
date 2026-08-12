@@ -15,6 +15,8 @@ import type {
   ApiKeyCreateRequestSchema,
   ApiKeySchema,
   ApiKeyCreateResponseSchema,
+  OAuthClientSchema,
+  OAuthClientCreateRequestSchema,
   ErrorResponseSchema,
   RateLimitErrorSchema,
   FeedStatusSchema,
@@ -54,6 +56,8 @@ export type IngestResponse = z.infer<typeof IngestResponseSchema>;
 export type ApiKeyCreateRequest = z.infer<typeof ApiKeyCreateRequestSchema>;
 export type ApiKey = z.infer<typeof ApiKeySchema>;
 export type ApiKeyCreateResponse = z.infer<typeof ApiKeyCreateResponseSchema>;
+export type OAuthClient = z.infer<typeof OAuthClientSchema>;
+export type OAuthClientCreateRequest = z.infer<typeof OAuthClientCreateRequestSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 export type RateLimitError = z.infer<typeof RateLimitErrorSchema>;
 export type FeedStatus = z.infer<typeof FeedStatusSchema>;

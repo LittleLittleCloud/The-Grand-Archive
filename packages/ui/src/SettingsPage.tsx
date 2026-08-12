@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSession, authClient } from "./auth-client";
 import { api, ApiError } from "./api";
-import type { ApiKey } from "@dak/contract";
+import type { ApiKey, OAuthClient } from "@dak/contract";
 import { navigate } from "./router";
 
 export function SettingsPage() {
@@ -26,6 +26,8 @@ export function SettingsPage() {
         <ProfileSection user={user} />
         <div className="mt-10" />
         <ApiKeysSection />
+        <div className="mt-10" />
+        <OAuthClientsSection />
         <div className="mt-10" />
         <DigestAdminSection />
       </main>
@@ -371,6 +373,203 @@ function ApiKeysSection() {
                   style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
                 >
                   Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ─── OAuth Clients Section ─── */
+
+function OAuthClientsSection() {
+  const [clients, setClients] = useState<OAuthClient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [redirectUris, setRedirectUris] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadClients(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function loadClients(isCancelled: () => boolean = () => false) {
+    setLoading(true);
+    try {
+      const data = await api.listOAuthClients();
+      if (!isCancelled()) setClients(data);
+    } catch (e) {
+      if (isCancelled()) return;
+      if (e instanceof ApiError && e.status === 401) {
+        navigate("/login");
+        return;
+      }
+      setError((e as Error).message);
+    } finally {
+      if (!isCancelled()) setLoading(false);
+    }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    const uris = redirectUris
+      .split(/[\s,]+/)
+      .map((u) => u.trim())
+      .filter(Boolean);
+    if (uris.length === 0) {
+      setError("Enter at least one redirect URI.");
+      return;
+    }
+    setCreating(true);
+    setError(null);
+    try {
+      const created = await api.createOAuthClient({
+        client_name: name.trim() || undefined,
+        redirect_uris: uris,
+      });
+      setClients((prev) => [created, ...prev]);
+      setName("");
+      setRedirectUris("");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : (e as Error).message);
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleDelete(clientId: string) {
+    setDeleting(clientId);
+    setError(null);
+    try {
+      await api.deleteOAuthClient(clientId);
+      setClients((prev) => prev.filter((c) => c.client_id !== clientId));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : (e as Error).message);
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  return (
+    <section>
+      <h2
+        className="font-display text-xl font-bold text-primary mb-2"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        OAuth Clients
+      </h2>
+      <p
+        className="text-on-surface-variant mb-6"
+        style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.7rem" }}
+      >
+        APPLICATIONS REGISTERED TO ACCESS THE MCP ENDPOINT
+      </p>
+
+      {error && (
+        <div className="mb-4 p-3 bg-surface-high text-on-surface text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Create client */}
+      <div className="bg-surface-low p-6 mb-6" style={{ boxShadow: "var(--shadow-whisper)" }}>
+        <p
+          className="text-xs text-on-surface-variant uppercase mb-3"
+          style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em" }}
+        >
+          Register a new client
+        </p>
+        <form onSubmit={handleCreate} className="space-y-3">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Client name (e.g. My Agent)"
+            className="w-full bg-transparent border-b border-outline/30 focus:border-primary py-2 text-on-surface text-sm outline-none transition"
+            style={{ fontFamily: "var(--font-body)" }}
+          />
+          <input
+            type="text"
+            value={redirectUris}
+            onChange={(e) => setRedirectUris(e.target.value)}
+            placeholder="Redirect URIs (comma or space separated)"
+            className="w-full bg-transparent border-b border-outline/30 focus:border-primary py-2 text-on-surface text-sm outline-none transition"
+            style={{ fontFamily: "var(--font-body)" }}
+          />
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={creating}
+              className="px-5 py-2 bg-primary text-on-primary text-sm font-semibold uppercase tracking-widest transition hover:bg-primary-container disabled:opacity-40"
+              style={{ fontFamily: "var(--font-label)" }}
+            >
+              {creating ? "Registering…" : "Register"}
+            </button>
+          </div>
+        </form>
+        <p
+          className="text-on-surface-variant mt-3"
+          style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem" }}
+        >
+          Redirect URIs must be https:// or http://localhost.
+        </p>
+      </div>
+
+      {/* Client list */}
+      <div className="bg-surface-low" style={{ boxShadow: "var(--shadow-whisper)" }}>
+        {loading ? (
+          <p className="px-6 py-8 text-on-surface-variant text-center text-sm">Loading…</p>
+        ) : clients.length === 0 ? (
+          <p className="px-6 py-8 text-on-surface-variant text-center text-sm">
+            No OAuth clients registered yet.
+          </p>
+        ) : (
+          <ul>
+            {clients.map((client, i) => (
+              <li
+                key={client.client_id}
+                className={`px-6 py-4 flex items-start justify-between gap-4 ${i % 2 === 0 ? "bg-surface-low" : "bg-surface"}`}
+              >
+                <div className="min-w-0">
+                  <p
+                    className="font-medium text-on-surface text-sm"
+                    style={{ fontFamily: "var(--font-body)" }}
+                  >
+                    {client.client_name || "Unnamed client"}
+                  </p>
+                  <p
+                    className="text-on-surface-variant mt-0.5"
+                    style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.7rem" }}
+                  >
+                    <span className="font-mono">{client.client_id}</span>
+                    {" · "}
+                    Registered {client.created_at.slice(0, 10)}
+                  </p>
+                  {client.redirect_uris.length > 0 && (
+                    <p
+                      className="text-on-surface-variant mt-1 break-all"
+                      style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem" }}
+                    >
+                      {client.redirect_uris.join(", ")}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleDelete(client.client_id)}
+                  disabled={deleting === client.client_id}
+                  className="shrink-0 text-sm text-secondary hover:text-primary transition-colors cursor-pointer disabled:opacity-40"
+                  style={{ fontFamily: "var(--font-label)", letterSpacing: "0.05em", fontSize: "0.75rem" }}
+                >
+                  {deleting === client.client_id ? "Deleting…" : "Delete"}
                 </button>
               </li>
             ))}

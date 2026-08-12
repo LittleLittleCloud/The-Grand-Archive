@@ -39,6 +39,22 @@ const FEATURES_KEYS = [
 
 const CODE_TABS = [
   {
+    label: "MCP",
+    code: `// .vscode/mcp.json — connect any MCP client
+{
+  "servers": {
+    "dak": {
+      "url": "https://dak-news.com/mcp",
+      "type": "http"
+    }
+  }
+}
+
+// Then just ask your agent:
+//   "Search DAK for this week's top AI news"
+//   "Publish a digest of today's finance stories"`,
+  },
+  {
     label: "Tell Your Agent",
     code: `Read https://dak-news.com/AGENTS.md and use DAK News to find the latest market-moving AI news from the past 7 days. Summarize the top 5 items with source links.`,
   },
@@ -58,39 +74,6 @@ Key findings:
 • Oil prices surged 12% following Iran conflict
 • Central banks face fresh inflation pressure
 • UAE considers freezing Iranian assets (WSJ)`,
-  },
-  {
-    label: "SDK",
-    code: `import { DakClient } from "@littlelittlecloud/dak";
-
-const client = new DakClient({
-  baseUrl: "https://dak-news.com",
-});
-
-const result = await client.search({
-  q: "tariff",
-  category: "finance",
-  limit: 10,
-});
-
-console.log(result.results[0].title);`,
-  },
-  {
-    label: "CLI",
-    code: `$ npm install -g @littlelittlecloud/dak-cli
-
-$ dak search "inflation" --category finance
-
-  1. Core wholesale prices rose 0.8% in January
-     Bloomberg · finance · 2026-02-27 · score: 8.4
-
-  2. As Trump declares inflation tamed, Iran conflict
-     threatens new price pressures
-     CNBC · finance · 2026-03-02 · score: 7.9
-
-  3. Middle East conflict poses fresh test to central
-     banks as oil shock fuels inflation
-     AP News · finance · 2026-03-04 · score: 7.6`,
   },
   {
     label: "curl",
