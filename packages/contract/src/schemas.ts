@@ -123,6 +123,20 @@ export const ApiKeyCreateResponseSchema = z.object({
   prefix: z.string(),
 });
 
+export const OAuthClientSchema = z.object({
+  client_id: z.string(),
+  client_name: z.string().nullable(),
+  redirect_uris: z.array(z.string()),
+  grant_types: z.array(z.string()),
+  token_endpoint_auth_method: z.string(),
+  created_at: z.string(),
+});
+
+export const OAuthClientCreateRequestSchema = z.object({
+  client_name: z.string().min(1).max(120).optional(),
+  redirect_uris: z.array(z.string().min(1)).min(1),
+});
+
 // ─── Feed Status ────────────────────────────────────────
 
 export const FeedStatusSchema = z.object({

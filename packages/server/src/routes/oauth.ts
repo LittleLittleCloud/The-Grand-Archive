@@ -1,0 +1,363 @@
+import { Hono } from "hono";
+import type { Context } from "hono";
+import type { HonoEnv } from "../types";
+import { hashApiKey, verifyApiKey } from "../auth/api-key";
+import { createAuth } from "../auth/better-auth";
+
+export const oauthRoutes = new Hono<HonoEnv>();
+
+// OAuth 2.0 protected-resource metadata (RFC 9728)
+oauthRoutes.get("/.well-known/oauth-protected-resource", (c) => {
+  const base = requestBaseUrl(c.req.url, c.req.header("host"));
+  return c.json({
+    resource: `${base}/mcp`,
+    authorization_servers: [base],
+    authorization_server: base,
+    bearer_methods_supported: ["header"],
+    scopes_supported: ["api_search"],
+  });
+});
+
+// OAuth 2.0 authorization-server metadata (RFC 8414)
+oauthRoutes.get("/.well-known/oauth-authorization-server", (c) => {
+  const base = requestBaseUrl(c.req.url, c.req.header("host"));
+  return c.json({
+    issuer: base,
+    authorization_endpoint: `${base}/oauth/authorize`,
+    token_endpoint: `${base}/oauth/token`,
+    registration_endpoint: `${base}/oauth/register`,
+    response_types_supported: ["code"],
+    grant_types_supported: ["authorization_code", "client_credentials"],
+    token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
+    registration_endpoint_auth_methods_supported: ["none"],
+    code_challenge_methods_supported: ["S256", "plain"],
+    scopes_supported: ["api_search"],
+  });
+});
+
+// OAuth 2.0 dynamic client registration (RFC 7591) for public PKCE clients.
+oauthRoutes.post("/oauth/register", async (c) => {
+  const payload = c.req.header("content-type")?.includes("application/json")
+    ? await c.req.json().catch(() => ({}))
+    : await c.req.parseBody();
+
+  const redirectUris = asStringArray(payload.redirect_uris).filter(isAllowedRedirectUri);
+  if (redirectUris.length === 0) {
+    return c.json({ error: "invalid_redirect_uri" }, 400);
+  }
+
+  const tokenEndpointAuthMethod = valueAsString(payload.token_endpoint_auth_method) || "none";
+  const ALLOWED_AUTH_METHODS = ["none", "client_secret_post", "client_secret_basic"];
+  if (!ALLOWED_AUTH_METHODS.includes(tokenEndpointAuthMethod)) {
+    return c.json({ error: "invalid_client_metadata" }, 400);
+  }
+  const isConfidential = tokenEndpointAuthMethod !== "none";
+
+  const clientId = randomToken("dak_client");
+  const clientName = valueAsString(payload.client_name);
+  const grantTypes = ["authorization_code"];
+  const responseTypes = ["code"];
+
+  // Confidential clients (e.g. Claude) get a client_secret, shown once and
+  // stored only as a hash. Public clients rely on PKCE alone.
+  let clientSecret: string | null = null;
+  let clientSecretHash: string | null = null;
+  if (isConfidential) {
+    clientSecret = randomToken("dak_cs");
+    clientSecretHash = await hashApiKey(clientSecret);
+  }
+
+  await c.env.DB.prepare(
+    `INSERT INTO oauth_clients
+      (id, client_id, client_name, redirect_uris, grant_types, response_types, token_endpoint_auth_method, client_secret_hash)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      crypto.randomUUID(),
+      clientId,
+      clientName || null,
+      JSON.stringify(redirectUris),
+      JSON.stringify(grantTypes),
+      JSON.stringify(responseTypes),
+      tokenEndpointAuthMethod,
+      clientSecretHash
+    )
+    .run();
+
+  return c.json({
+    client_id: clientId,
+    client_id_issued_at: Math.floor(Date.now() / 1000),
+    ...(clientSecret
+      ? { client_secret: clientSecret, client_secret_expires_at: 0 }
+      : {}),
+    client_name: clientName || undefined,
+    redirect_uris: redirectUris,
+    grant_types: grantTypes,
+    response_types: responseTypes,
+    token_endpoint_auth_method: tokenEndpointAuthMethod,
+  }, 201);
+});
+
+// OAuth 2.1 Authorization Code + PKCE endpoint (browser login flow).
+oauthRoutes.get("/oauth/authorize", async (c) => {
+  const params = c.req.query();
+  const responseType = valueAsString(params.response_type);
+  const clientId = valueAsString(params.client_id);
+  const redirectUri = valueAsString(params.redirect_uri);
+  const state = valueAsString(params.state);
+  const scope = valueAsString(params.scope) || "api_search";
+  const codeChallenge = valueAsString(params.code_challenge);
+  const codeChallengeMethod = (valueAsString(params.code_challenge_method) || "S256").toUpperCase();
+
+  if (responseType !== "code") {
+    return oauthAuthorizeError(c, redirectUri, "unsupported_response_type", state);
+  }
+  if (!clientId || !redirectUri || !isAllowedRedirectUri(redirectUri)) {
+    return c.json({ error: "invalid_request", error_description: "Invalid or missing client_id/redirect_uri." }, 400);
+  }
+  if (!codeChallenge) {
+    return oauthAuthorizeError(c, redirectUri, "invalid_request", state, "Missing code_challenge.");
+  }
+  if (codeChallengeMethod !== "S256" && codeChallengeMethod !== "PLAIN") {
+    return oauthAuthorizeError(c, redirectUri, "invalid_request", state, "Unsupported code_challenge_method.");
+  }
+  const registeredClient = await c.env.DB.prepare(
+    "SELECT redirect_uris FROM oauth_clients WHERE client_id = ?"
+  )
+    .bind(clientId)
+    .first<{ redirect_uris: string | null }>();
+  if (registeredClient?.redirect_uris) {
+    const allowedRedirectUris = safeParseStringArray(registeredClient.redirect_uris);
+    if (!allowedRedirectUris.includes(redirectUri)) {
+      return oauthAuthorizeError(c, redirectUri, "invalid_request", state, "Unregistered redirect_uri.");
+    }
+  }
+
+  const auth = createAuth(c.env);
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session?.user?.id) {
+    const requestUrl = new URL(c.req.url);
+    const returnTo = encodeURIComponent(requestUrl.pathname + requestUrl.search);
+    return c.redirect(`/login?return_to=${returnTo}`, 302);
+  }
+
+  const code = randomToken("dak_oac");
+  await c.env.DB.prepare(
+    `INSERT INTO oauth_authorization_codes
+      (id, code, user_id, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+10 minutes'))`
+  )
+    .bind(
+      crypto.randomUUID(),
+      code,
+      session.user.id,
+      clientId,
+      redirectUri,
+      scope,
+      codeChallenge,
+      codeChallengeMethod
+    )
+    .run();
+
+  const out = new URL(redirectUri);
+  out.searchParams.set("code", code);
+  if (state) out.searchParams.set("state", state);
+  return c.redirect(out.toString(), 302);
+});
+
+// Token endpoint: supports auth code (+ PKCE) and client_credentials (API key bridge).
+oauthRoutes.post("/oauth/token", (c) => {
+  const body = c.req.header("content-type")?.includes("application/json")
+    ? c.req.json().catch(() => ({}))
+    : c.req.parseBody();
+
+  return Promise.resolve(body).then(async (payload) => {
+    const grantType = valueAsString(payload.grant_type);
+    const scope = valueAsString(payload.scope) || "api_search";
+
+    if (grantType === "authorization_code") {
+      const code = valueAsString(payload.code);
+      const clientId = valueAsString(payload.client_id);
+      const redirectUri = valueAsString(payload.redirect_uri);
+      const codeVerifier = valueAsString(payload.code_verifier);
+      if (!code || !clientId || !redirectUri || !codeVerifier) {
+        return c.json({ error: "invalid_request" }, 400);
+      }
+      const row = await c.env.DB.prepare(
+        `SELECT id, user_id, client_id, redirect_uri, scope, code_challenge, code_challenge_method
+         FROM oauth_authorization_codes
+         WHERE code = ? AND used_at IS NULL AND expires_at > datetime('now')`
+      )
+        .bind(code)
+        .first<{
+          id: string;
+          user_id: string;
+          client_id: string;
+          redirect_uri: string;
+          scope: string;
+          code_challenge: string;
+          code_challenge_method: string;
+        }>();
+      if (!row) return c.json({ error: "invalid_grant" }, 400);
+      if (row.client_id !== clientId || row.redirect_uri !== redirectUri) {
+        return c.json({ error: "invalid_grant" }, 400);
+      }
+      const method = (row.code_challenge_method || "S256").toUpperCase();
+      const validPkce = method === "PLAIN"
+        ? row.code_challenge === codeVerifier
+        : row.code_challenge === (await sha256Base64Url(codeVerifier));
+      if (!validPkce) return c.json({ error: "invalid_grant" }, 400);
+
+      // Confidential clients must additionally present their client_secret.
+      const registered = await c.env.DB.prepare(
+        "SELECT client_secret_hash FROM oauth_clients WHERE client_id = ?"
+      )
+        .bind(clientId)
+        .first<{ client_secret_hash: string | null }>();
+      if (registered?.client_secret_hash) {
+        const providedSecret = extractClientSecret(c, payload as Record<string, unknown>);
+        if (!providedSecret || (await hashApiKey(providedSecret)) !== registered.client_secret_hash) {
+          return c.json({ error: "invalid_client" }, 401);
+        }
+      }
+
+      const consume = await c.env.DB.prepare(
+        "UPDATE oauth_authorization_codes SET used_at = datetime('now') WHERE id = ? AND used_at IS NULL"
+      )
+        .bind(row.id)
+        .run();
+      if ((consume.meta.changes ?? 0) !== 1) return c.json({ error: "invalid_grant" }, 400);
+
+      const accessToken = randomToken("dak_oat");
+      const tokenHash = await hashApiKey(accessToken);
+      await c.env.DB.prepare(
+        `INSERT INTO oauth_access_tokens (id, user_id, hash, scope, expires_at)
+         VALUES (?, ?, ?, ?, datetime('now', '+1 hour'))`
+      )
+        .bind(crypto.randomUUID(), row.user_id, tokenHash, row.scope || scope)
+        .run();
+
+      return c.json({
+        access_token: accessToken,
+        token_type: "Bearer",
+        expires_in: 3600,
+        scope: row.scope || scope,
+      });
+    }
+
+    const clientSecret = valueAsString(payload.client_secret);
+
+    if (grantType !== "client_credentials") {
+      return c.json({ error: "unsupported_grant_type" }, 400);
+    }
+    if (!clientSecret) {
+      return c.json({ error: "invalid_client" }, 401);
+    }
+
+    const verified = await verifyApiKey(c.env.DB, clientSecret);
+    if (!verified) {
+      return c.json({ error: "invalid_client" }, 401);
+    }
+
+    return c.json({
+      access_token: clientSecret,
+      token_type: "Bearer",
+      scope,
+    });
+  });
+});
+
+function requestBaseUrl(url: string, host?: string): string {
+  const parsed = new URL(url);
+  const protocol = parsed.protocol || "https:";
+  const authority = host?.trim() || parsed.host;
+  return `${protocol}//${authority}`;
+}
+
+function valueAsString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value[0] && typeof value[0] === "string") return value[0];
+  return "";
+}
+
+/**
+ * Extract a client_secret from a token request: either the `client_secret` form
+ * field (client_secret_post) or the password half of an HTTP Basic header
+ * (client_secret_basic).
+ */
+function extractClientSecret(c: Context<HonoEnv>, payload: Record<string, unknown>): string {
+  const fromBody = valueAsString(payload.client_secret);
+  if (fromBody) return fromBody;
+  const auth = c.req.header("authorization");
+  if (auth?.startsWith("Basic ")) {
+    try {
+      const decoded = atob(auth.slice(6));
+      const idx = decoded.indexOf(":");
+      if (idx >= 0) return decoded.slice(idx + 1);
+    } catch {
+      // ignore malformed Basic header
+    }
+  }
+  return "";
+}
+
+function asStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === "string");
+  return [];
+}
+
+function safeParseStringArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+async function sha256Base64Url(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  let b64 = btoa(String.fromCharCode(...new Uint8Array(digest)));
+  b64 = b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return b64;
+}
+
+export function randomToken(prefix: string): string {
+  const buf = new Uint8Array(24);
+  crypto.getRandomValues(buf);
+  const token = btoa(String.fromCharCode(...buf))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+  return `${prefix}_${token}`;
+}
+
+export function isAllowedRedirectUri(redirectUri: string): boolean {
+  try {
+    const url = new URL(redirectUri);
+    if (url.hash) return false;
+    if (url.protocol === "https:") return true;
+    if (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function oauthAuthorizeError(
+  c: Context<HonoEnv>,
+  redirectUri: string,
+  error: string,
+  state: string,
+  errorDescription?: string
+) {
+  if (!isAllowedRedirectUri(redirectUri)) {
+    return c.json({ error, ...(errorDescription ? { error_description: errorDescription } : {}) }, 400);
+  }
+  const out = new URL(redirectUri);
+  out.searchParams.set("error", error);
+  if (state) out.searchParams.set("state", state);
+  if (errorDescription) out.searchParams.set("error_description", errorDescription);
+  return c.redirect(out.toString(), 302);
+}
