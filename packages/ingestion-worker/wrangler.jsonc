@@ -5,7 +5,7 @@
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
   "triggers": {
-    "crons": ["*/30 * * * *"]
+    "crons": ["0 */4 * * *"]
   },
   "d1_databases": [
     {
