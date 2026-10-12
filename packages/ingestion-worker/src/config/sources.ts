@@ -13,6 +13,7 @@ interface RawSource {
   category: string;
   enabled: boolean;
   tags: string[];
+  language?: string;
 }
 
 function resolveRequestUrl(url: string, base: string): string {
@@ -37,5 +38,6 @@ export function loadSources(rsshubBaseUrl?: string): SourceConfig[] {
       requestUrl: resolveRequestUrl(source.url, base),
       category: source.category,
       tags: source.tags ?? [],
+      language: source.language,
     }));
 }

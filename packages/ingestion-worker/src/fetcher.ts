@@ -27,6 +27,7 @@ export interface SourceConfig {
   requestUrl: string;
   category: string;
   tags: string[];
+  language?: string;
 }
 
 export async function fetchAllSources(
@@ -93,7 +94,7 @@ async function fetchSource(source: SourceConfig, fetchFn: FetchFn): Promise<Entr
       category: source.category as EntryCreate["category"],
       tags: [...source.tags],
       author: item.creator || (item as Record<string, string>).author || null,
-      language: "en",
+      language: source.language ?? "en",
       published,
     });
   }
