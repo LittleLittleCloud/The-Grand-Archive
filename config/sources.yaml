@@ -228,6 +228,15 @@ sources:
     tags: [科技, 美国]
     description: CNBC 科技新闻
 
+  - name: Joho no Todai (情報の灯台)
+    url: https://joho-todai.com/pinterest-rss/
+    category: tech
+    enabled: true
+    fetch_interval: 1800
+    tags: [日本, 科技, 半导体, Linux, Windows, AI, 网络安全]
+    description: 日语科技文章标题与短摘录，附原文链接
+    language: ja
+
   - name: CNBC Energy
     url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=19836768
     category: finance
