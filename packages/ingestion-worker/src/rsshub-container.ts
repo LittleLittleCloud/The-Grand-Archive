@@ -10,7 +10,7 @@ import type { Bindings } from "./types";
  *
  * The image (diygod/rsshub:chromium-bundled) bundles Chromium for the handful
  * of routes that need a headless browser; it runs on the custom instance type
- * (1 vCPU / 2 GiB / 4 GB disk) configured in wrangler.jsonc.
+ * (1 vCPU / 3 GiB / 4 GB disk) configured in wrangler.jsonc.
  */
 export class RsshubContainer extends Container<Bindings> {
   // RSSHub listens on 1200 by default.
