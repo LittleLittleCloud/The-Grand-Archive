@@ -23,9 +23,10 @@
       "image": "./rsshub.Dockerfile",
       // Memory and disk are billed on what is provisioned, not what is used.
       // RSSHub peaks at ~1.2 GiB RAM / ~1.4 GB disk, and CPU is near 1/2 vCPU at
-      // P99. Custom types need >= 1 vCPU; CPU is billed on active usage, so the
-      // extra vCPU costs nothing while memory and disk are halved vs standard-1.
-      "instance_type": { "vcpu": 1, "memory_mib": 2048, "disk_mb": 4000 },
+      // P99. Custom types need >= 1 vCPU and >= 3 GiB per vCPU, so 1 vCPU / 3 GiB
+      // is the smallest custom size. CPU is billed on active usage, so the extra
+      // vCPU costs nothing; memory drops 25% and disk halves vs standard-1.
+      "instance_type": { "vcpu": 1, "memory_mib": 3072, "disk_mb": 4000 },
       "max_instances": 1
     }
   ],
