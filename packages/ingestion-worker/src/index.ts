@@ -10,8 +10,14 @@ import type { Bindings } from "./types";
 // bound RSSHub container rather than the public network.
 const RSSHUB_INTERNAL_HOST = "rsshub.internal";
 
+function getRsshub(env: Bindings) {
+  // Cast works around a @cloudflare/workers-types version skew between this
+  // worker and the @cloudflare/containers package.
+  return getContainer(env.RSSHUB as never, "rsshub");
+}
+
 /** Route RSSHub feed URLs to the container binding; everything else uses fetch. */
-function makeFetchFn(env: Bindings): FetchFn {
+function makeFetchFn(env: Bindings, onRsshubUsed: () => void): FetchFn {
   return (url, init) => {
     let host = "";
     try {
@@ -20,13 +26,25 @@ function makeFetchFn(env: Bindings): FetchFn {
       // non-absolute URL — fall through to global fetch
     }
     if (host === RSSHUB_INTERNAL_HOST) {
-      // Cast works around a @cloudflare/workers-types version skew between this
-      // worker and the @cloudflare/containers package.
-      const container = getContainer(env.RSSHUB as never, "rsshub");
-      return container.fetch(new Request(url, init));
+      onRsshubUsed();
+      return getRsshub(env).fetch(new Request(url, init));
     }
     return fetch(url, init);
   };
+}
+
+/**
+ * Stop the RSSHub container as soon as a cycle is done. Memory and disk are
+ * billed for as long as the container runs, so don't rely on `sleepAfter`
+ * alone to shut it down.
+ */
+async function stopRsshub(env: Bindings) {
+  try {
+    await getRsshub(env).stop();
+    console.log("🛑 RSSHub container stopped");
+  } catch (err) {
+    console.error("⚠️ failed to stop RSSHub container:", err);
+  }
 }
 
 async function runIngestion(env: Bindings) {
@@ -34,7 +52,18 @@ async function runIngestion(env: Bindings) {
   const sources = loadSources(env.RSSHUB_BASE_URL);
   console.log(`📡 ${sources.length} sources loaded`);
 
-  const entries = await fetchAllSources(sources, makeFetchFn(env));
+  let usedRsshub = false;
+  let entries: Awaited<ReturnType<typeof fetchAllSources>>;
+  try {
+    entries = await fetchAllSources(
+      sources,
+      makeFetchFn(env, () => {
+        usedRsshub = true;
+      })
+    );
+  } finally {
+    if (usedRsshub) await stopRsshub(env);
+  }
   console.log(`📦 ${entries.length} entries fetched`);
 
   const { inserted, duplicates } = await writeEntries(env.DB, entries);
@@ -46,7 +75,7 @@ async function runIngestion(env: Bindings) {
 }
 
 export default {
-  // Cron trigger: */30 * * * * (see wrangler.jsonc)
+  // Cron trigger: see triggers.crons in wrangler.jsonc
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(
       runIngestion(env).then(
